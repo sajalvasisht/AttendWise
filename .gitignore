@@ -1,0 +1,20 @@
+# Python virtual env and cache
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Node modules and build output
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# IDEs and OS files
+.DS_Store
+.vscode/
+.idea/

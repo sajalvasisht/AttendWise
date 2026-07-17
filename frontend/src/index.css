@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@theme inline {
+    --font-sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-heading: var(--font-sans);
+    
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    
+    --radius-lg: 12px;
+    --radius-md: 10px;
+    --radius-sm: 8px;
+}
+
+:root {
+    --background: #FAFAF8;
+    --foreground: #1E1E1C;
+    
+    --card: #FFFFFF;
+    --card-foreground: #1E1E1C;
+    
+    --popover: #FFFFFF;
+    --popover-foreground: #1E1E1C;
+    
+    --primary: #1E1E1C;
+    --primary-foreground: #FAFAF8;
+    
+    --secondary: #F1F1EE;
+    --secondary-foreground: #1E1E1C;
+    
+    --muted: #F5F5F2;
+    --muted-foreground: #6F6F6C;
+    
+    --accent: #EDEDE9;
+    --accent-foreground: #1E1E1C;
+    
+    --destructive: #D9383A;
+    --destructive-foreground: #FAFAF8;
+    
+    --border: #E8E8E4;
+    --input: #E8E8E4;
+    --ring: #1E1E1C;
+    
+    --radius: 12px;
+}
+
+/* Base resets & typography */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E8E8E4;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #D5D5D0;
+}
