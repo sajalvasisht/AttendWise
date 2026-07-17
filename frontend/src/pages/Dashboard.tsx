@@ -67,19 +67,19 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Daily Tracker Card */}
-            <div className="rounded-xl border border-border bg-card p-6 space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.01)] flex flex-col justify-between hover:border-foreground/10 transition-colors">
+            <Link to="/tracker" className="rounded-xl border border-border bg-card p-6 space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.01)] flex flex-col justify-between hover:border-foreground/20 transition-all cursor-pointer group">
               <div className="space-y-3">
-                <div className="h-8 w-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center text-foreground">
+                <div className="h-8 w-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center text-foreground group-hover:bg-accent transition-colors">
                   <Calendar className="h-4 w-4" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Daily Tracker</h3>
+                  <h3 className="text-sm font-semibold text-foreground group-hover:underline">Daily Tracker</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Log daily class statuses. Back-mark or edit records directly from the integrated academic calendar view.
                   </p>
                 </div>
               </div>
-            </div>
+            </Link>
 
             {/* Leave Planner Card */}
             <div className="rounded-xl border border-border bg-card p-6 space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.01)] flex flex-col justify-between hover:border-foreground/10 transition-colors">
