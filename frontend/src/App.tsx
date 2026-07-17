@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import SetupWizard from "./pages/SetupWizard";
 import DailyTracker from "./pages/DailyTracker";
+import AttendanceSummary from "./pages/AttendanceSummary";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const App: React.FC = () => {
@@ -28,6 +29,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <DailyTracker />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/summary"
+            element={
+              <ProtectedRoute>
+                <AttendanceSummary />
               </ProtectedRoute>
             }
           />

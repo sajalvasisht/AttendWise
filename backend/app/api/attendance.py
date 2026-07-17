@@ -8,6 +8,8 @@ from app.models.models import LectureOccurrence, User
 from app.schemas.attendance import LectureOccurrenceResponse, AttendanceUpdate
 from app.api.deps import get_current_user
 from app.api.subjects import verify_semester_owner
+from app.schemas.attendance_summary import OverallAttendanceStats, SubjectAttendanceStats
+from app.services.attendance_engine import calculate_semester_summary
 
 router = APIRouter(prefix="/semesters/{semester_id}/attendance", tags=["attendance"])
 
@@ -76,3 +78,23 @@ def update_occurrence_status(
     db.commit()
     db.refresh(occurrence)
     return occurrence
+
+@router.get("/summary", response_model=OverallAttendanceStats)
+def read_attendance_summary(
+    semester_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    verify_semester_owner(semester_id, current_user.id, db)
+    summary = calculate_semester_summary(db, semester_id)
+    return summary["overall"]
+
+@router.get("/subjects", response_model=List[SubjectAttendanceStats])
+def read_subjects_attendance(
+    semester_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    verify_semester_owner(semester_id, current_user.id, db)
+    summary = calculate_semester_summary(db, semester_id)
+    return summary["subjects"]
