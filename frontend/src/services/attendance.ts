@@ -40,6 +40,14 @@ export interface SubjectAttendanceStats {
   required_to_attend: number;
 }
 
+export interface UpcomingDaySchedule {
+  date: string;
+  day_label: string;
+  event_type?: string;
+  description?: string;
+  occurrences: LectureOccurrence[];
+}
+
 export const attendanceService = {
   async getByDate(semesterId: number, dateStr?: string): Promise<LectureOccurrence[]> {
     const params = dateStr ? { date_query: dateStr } : {};
@@ -64,6 +72,11 @@ export const attendanceService = {
 
   async getSubjectsAttendance(semesterId: number): Promise<SubjectAttendanceStats[]> {
     const response = await api.get(`/semesters/${semesterId}/attendance/subjects`);
+    return response.data;
+  },
+
+  async getUpcoming(semesterId: number): Promise<UpcomingDaySchedule[]> {
+    const response = await api.get(`/semesters/${semesterId}/attendance/upcoming`);
     return response.data;
   },
 };

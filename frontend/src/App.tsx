@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import SetupWizard from "./pages/SetupWizard";
 import DailyTracker from "./pages/DailyTracker";
 import AttendanceSummary from "./pages/AttendanceSummary";
+import LeavePlanner from "./pages/LeavePlanner";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const App: React.FC = () => {
@@ -37,6 +38,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <AttendanceSummary />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/planner"
+            element={
+              <ProtectedRoute>
+                <LeavePlanner />
               </ProtectedRoute>
             }
           />

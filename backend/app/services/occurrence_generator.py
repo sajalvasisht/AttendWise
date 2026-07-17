@@ -20,9 +20,6 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
         return
 
     # Delete existing future/unmarked occurrences on or after start_from_date
-    # Note: We delete all occurrences >= start_from_date because we are regenerating them.
-    # If the user changed the calendar or timetable, we want to align future occurrences.
-    # Past occurrences (before start_from_date) are locked.
     db.query(LectureOccurrence).filter(
         LectureOccurrence.semester_id == semester_id,
         LectureOccurrence.date >= start_from_date
@@ -35,15 +32,12 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
         CalendarEvent.date >= start_from_date
     ).all()
 
-    # Map calendar events by date for fast lookup
-    holidays = set()
-    working_saturdays = set()
+    # Parse working days
+    working_days_str = semester.working_days if semester.working_days else "0,1,2,3,4"
+    working_days_set = {int(d) for d in working_days_str.split(",") if d.strip()}
 
-    for event in calendar_events:
-        if event.event_type in ("holiday", "exam"):
-            holidays.add(event.date)
-        elif event.event_type == "working_saturday":
-            working_saturdays.add(event.date)
+    # Map calendar events by date for fast lookup
+    exceptions_by_date = {event.date: event for event in calendar_events}
 
     # Generate occurrences day-by-day
     current_date = start_from_date
@@ -53,16 +47,23 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
     new_occurrences = []
 
     while current_date <= end_date:
-        # Check if the date is a holiday or exam day
-        if current_date in holidays:
-            current_date += delta
-            continue
+        event = exceptions_by_date.get(current_date)
+        is_working = False
+        timetable_weekday = current_date.weekday()
 
-        weekday = current_date.weekday()  # 0 = Monday, 6 = Sunday
+        if event:
+            if event.event_type in ("working_day_override", "working_saturday"):
+                is_working = True
+                if event.timetable_day_override is not None:
+                    timetable_weekday = event.timetable_day_override
+            elif event.event_type in ("holiday", "college_closure", "exam_break", "exam", "exam_day"):
+                is_working = False
+        else:
+            if current_date.weekday() in working_days_set:
+                is_working = True
 
-        if weekday < 5:  # Monday to Friday
-            # Generate lectures for matching slots
-            day_slots = [s for s in slots if s.day_of_week == weekday]
+        if is_working:
+            day_slots = [s for s in slots if s.day_of_week == timetable_weekday]
             for slot in day_slots:
                 new_occurrences.append(
                     LectureOccurrence(
@@ -74,21 +75,6 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
                         attendance_status="unmarked"
                     )
                 )
-        elif weekday == 5:  # Saturday
-            # Only generate if it is explicitly a working Saturday
-            if current_date in working_saturdays:
-                day_slots = [s for s in slots if s.day_of_week == 5]
-                for slot in day_slots:
-                    new_occurrences.append(
-                        LectureOccurrence(
-                            semester_id=semester_id,
-                            subject_id=slot.subject_id,
-                            date=current_date,
-                            start_time=slot.start_time,
-                            end_time=slot.end_time,
-                            attendance_status="unmarked"
-                        )
-                    )
 
         current_date += delta
 

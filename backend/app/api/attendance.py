@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Any, Optional
-from datetime import date
+from datetime import date, timedelta
 
 from app.database.session import get_db
-from app.models.models import LectureOccurrence, User
-from app.schemas.attendance import LectureOccurrenceResponse, AttendanceUpdate
+from app.models.models import LectureOccurrence, User, CalendarEvent, Semester
+from app.schemas.attendance import LectureOccurrenceResponse, AttendanceUpdate, UpcomingDaySchedule
 from app.api.deps import get_current_user
 from app.api.subjects import verify_semester_owner
 from app.schemas.attendance_summary import OverallAttendanceStats, SubjectAttendanceStats
@@ -98,3 +98,61 @@ def read_subjects_attendance(
     verify_semester_owner(semester_id, current_user.id, db)
     summary = calculate_semester_summary(db, semester_id)
     return summary["subjects"]
+
+@router.get("/upcoming", response_model=List[UpcomingDaySchedule])
+def read_upcoming_schedule(
+    semester_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    verify_semester_owner(semester_id, current_user.id, db)
+    
+    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+    if not semester:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Semester not found")
+        
+    working_days_str = semester.working_days if semester.working_days else "0,1,2,3,4"
+    working_days_set = {int(d) for d in working_days_str.split(",") if d.strip()}
+    
+    today_val = date.today()
+    upcoming_days = []
+    
+    for i in range(1, 4):
+        target_date = today_val + timedelta(days=i)
+        
+        if i == 1:
+            day_label = "Tomorrow"
+        else:
+            day_label = target_date.strftime("%A")
+            
+        event = db.query(CalendarEvent).filter(
+            CalendarEvent.semester_id == semester_id,
+            CalendarEvent.date == target_date
+        ).first()
+        
+        event_type = None
+        description = None
+        
+        if event:
+            event_type = event.event_type
+            description = event.description
+        else:
+            weekday_idx = target_date.weekday()
+            if weekday_idx not in working_days_set:
+                event_type = "weekend"
+                description = "Weekend"
+                
+        occurrences = db.query(LectureOccurrence).filter(
+            LectureOccurrence.semester_id == semester_id,
+            LectureOccurrence.date == target_date
+        ).order_by(LectureOccurrence.start_time).all()
+        
+        upcoming_days.append({
+            "date": target_date,
+            "day_label": day_label,
+            "event_type": event_type,
+            "description": description,
+            "occurrences": occurrences
+        })
+        
+    return upcoming_days

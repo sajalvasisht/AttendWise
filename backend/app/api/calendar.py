@@ -38,7 +38,11 @@ def save_calendar_events(
             semester_id=semester_id,
             date=event.date,
             event_type=event.event_type,
-            description=event.description
+            description=event.description,
+            timetable_day_override=event.timetable_day_override,
+            subject_id=event.subject_id,
+            start_time=event.start_time,
+            end_time=event.end_time
         )
         for event in events_in
     ]

@@ -21,7 +21,8 @@ def create_semester(
         user_id=current_user.id,
         name=semester_in.name,
         start_date=semester_in.start_date,
-        end_date=semester_in.end_date
+        end_date=semester_in.end_date,
+        working_days=semester_in.working_days
     )
     db.add(db_semester)
     db.commit()

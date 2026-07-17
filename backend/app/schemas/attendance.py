@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date, time
+from typing import List, Optional
 from app.schemas.subject import SubjectResponse
 
 class LectureOccurrenceResponse(BaseModel):
@@ -17,3 +18,13 @@ class LectureOccurrenceResponse(BaseModel):
 
 class AttendanceUpdate(BaseModel):
     status: str = Field(..., description="'present', 'absent', 'cancelled', 'unmarked'")
+
+class UpcomingDaySchedule(BaseModel):
+    date: date
+    day_label: str
+    event_type: Optional[str] = None
+    description: Optional[str] = None
+    occurrences: List[LectureOccurrenceResponse]
+
+    class Config:
+        from_attributes = True

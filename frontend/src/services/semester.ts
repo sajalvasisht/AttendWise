@@ -5,6 +5,7 @@ export interface Semester {
   name: string;
   start_date: string;
   end_date: string;
+  working_days: string;
   user_id: number;
 }
 
@@ -19,7 +20,7 @@ export const semesterService = {
     return response.data;
   },
 
-  async create(data: { name: string; start_date: string; end_date: string }): Promise<Semester> {
+  async create(data: { name: string; start_date: string; end_date: string; working_days?: string }): Promise<Semester> {
     const response = await api.post("/semesters", data);
     return response.data;
   },

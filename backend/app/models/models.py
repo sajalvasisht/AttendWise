@@ -23,6 +23,7 @@ class Semester(Base):
     name = Column(String, nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
+    working_days = Column(String, default="0,1,2,3,4", nullable=False)  # comma separated day indexes (0=Mon, 6=Sun)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="semesters")
@@ -68,10 +69,15 @@ class CalendarEvent(Base):
     id = Column(Integer, primary_key=True, index=True)
     semester_id = Column(Integer, ForeignKey("semesters.id", ondelete="CASCADE"), nullable=False)
     date = Column(Date, nullable=False)
-    event_type = Column(String, nullable=False)  # "holiday", "working_saturday", "exam"
+    event_type = Column(String, nullable=False)  # "holiday", "working_day_override", "college_closure", "exam_break", "working_saturday", "exam", "exam_day"
     description = Column(String, nullable=True)
+    timetable_day_override = Column(Integer, nullable=True)  # weekday timetable to run (0=Mon, 6=Sun)
+    subject_id = Column(Integer, ForeignKey("subjects.id", ondelete="CASCADE"), nullable=True)
+    start_time = Column(Time, nullable=True)
+    end_time = Column(Time, nullable=True)
 
     semester = relationship("Semester", back_populates="calendar_events")
+    subject = relationship("Subject")
 
 
 class LectureOccurrence(Base):

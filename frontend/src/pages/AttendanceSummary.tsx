@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { semesterService } from "../services/semester";
-import type { Semester } from "../services/semester";
 import { attendanceService } from "../services/attendance";
 import type { OverallAttendanceStats, SubjectAttendanceStats } from "../services/attendance";
-import { ArrowLeft, Loader2, AlertCircle, BookOpen, Calculator } from "lucide-react";
+import { Loader2, AlertCircle, BookOpen, Calculator } from "lucide-react";
+import Navbar from "../components/Navbar";
 
 const AttendanceSummary: React.FC = () => {
-  const { logout } = useAuth();
   const navigate = useNavigate();
 
-  const [semester, setSemester] = useState<Semester | null>(null);
   const [overall, setOverall] = useState<OverallAttendanceStats | null>(null);
   const [subjects, setSubjects] = useState<SubjectAttendanceStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +24,6 @@ const AttendanceSummary: React.FC = () => {
         }
         
         const activeSem = sems[0];
-        setSemester(activeSem);
         
         // Fetch stats parallelly
         const [overallData, subjectsData] = await Promise.all([
@@ -50,31 +46,7 @@ const AttendanceSummary: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col font-sans">
       
-      {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-50 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
-        <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <Link to="/dashboard" className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background shadow-[0_1px_2px_rgba(0,0,0,0.02)] text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <span className="font-semibold text-sm tracking-tight">Attendance Summary</span>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {semester && (
-              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-                {semester.name}
-              </span>
-            )}
-            <button
-              onClick={logout}
-              className="text-xs text-muted-foreground hover:text-foreground py-1.5 px-3 rounded-lg hover:bg-muted cursor-pointer transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Grid */}
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 space-y-10">
