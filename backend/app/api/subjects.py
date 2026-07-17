@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from typing import List, Any
 
@@ -76,13 +76,13 @@ def update_subject(
     db.refresh(subject)
     return subject
 
-@router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_subject(
     semester_id: int,
     subject_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
-) -> Any:
+) -> Response:
     verify_semester_owner(semester_id, current_user.id, db)
     subject = db.query(Subject).filter(
         Subject.id == subject_id,
@@ -95,4 +95,4 @@ def delete_subject(
         )
     db.delete(subject)
     db.commit()
-    return None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

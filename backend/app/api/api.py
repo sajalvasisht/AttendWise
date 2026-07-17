@@ -1,3 +1,4 @@
+from fastapi import APIRouter
 from app.api import auth, semesters, subjects, timetable, calendar
 
 api_router = APIRouter()
