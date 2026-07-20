@@ -7,8 +7,9 @@ import { subjectService } from "../services/subject";
 import type { Subject } from "../services/subject";
 import { timetableService } from "../services/timetable";
 import { calendarService } from "../services/calendar";
+import { aiService } from "../services/ai";
 import { 
-  GraduationCap, Plus, Trash2, Clock, AlertCircle, ArrowRight, Check 
+  GraduationCap, Plus, Trash2, Clock, AlertCircle, ArrowRight, Check, Loader2
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -24,6 +25,12 @@ const SetupWizard: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetableSlots, setTimetableSlots] = useState<any[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+
+  // AI assisted import state
+  const [setupMethod, setSetupMethod] = useState<"choose" | "manual" | "ai">("choose");
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [extractedSubjects, setExtractedSubjects] = useState<any[]>([]);
+  const [extractedSlots, setExtractedSlots] = useState<any[]>([]);
   
   // Local form loading/error states
   const [loading, setLoading] = useState(false);
@@ -73,6 +80,7 @@ const SetupWizard: React.FC = () => {
             setWorkingDays(latestSem.working_days.split(",").map(Number));
           }
           loadSemesterData(latestSem.id);
+          setSetupMethod("manual");
           setStep(3); // Start at step 3 (Subjects) if semester exists
         }
       } catch (err) {
@@ -94,6 +102,35 @@ const SetupWizard: React.FC = () => {
       setCalendarEvents(evs);
     } catch (err) {
       console.error("Error loading sub-resources:", err);
+    }
+  };
+
+  const handleAIUpload = async () => {
+    if (!fileToUpload) return;
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await aiService.extractTimetable(fileToUpload);
+      
+      // Auto-fill form values
+      setSemName(response.semester_name);
+      setSemStart(response.start_date);
+      setSemEnd(response.end_date);
+      setWorkingDays(response.working_days);
+      setExtractedSubjects(response.subjects);
+      setExtractedSlots(response.timetable_slots);
+      
+      setSetupMethod("manual");
+      setStep(1);
+    } catch (err: any) {
+      console.error("AI Upload failed", err);
+      setError(
+        err.response?.data?.detail || 
+        "Failed to extract timetable. Please verify the file format or configure Manual Setup instead."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -154,6 +191,45 @@ const SetupWizard: React.FC = () => {
       setSemester(updated);
       
       setSelectedDay(workingDays[0]);
+
+      if (extractedSubjects.length > 0) {
+        const createdSubjects: Subject[] = [];
+        for (const es of extractedSubjects) {
+          try {
+            const added = await subjectService.create(semester.id, {
+              name: es.name,
+              code: es.code || undefined,
+              faculty: undefined,
+              min_attendance_percent: es.min_attendance_percent
+            });
+            createdSubjects.push(added);
+          } catch (subjErr) {
+            console.error("Failed to auto-create subject", es.name, subjErr);
+          }
+        }
+        setSubjects(createdSubjects);
+        
+        // Map extracted slots using subject name or code to subject ID!
+        const mappedSlots = extractedSlots.map(slot => {
+          const matched = createdSubjects.find(cs => 
+            cs.name.toLowerCase() === slot.subject_name.toLowerCase() ||
+            (slot.subject_code && cs.code && cs.code.toLowerCase() === slot.subject_code.toLowerCase())
+          );
+          return {
+            subject_id: matched ? matched.id : 0,
+            day_of_week: slot.day_of_week,
+            start_time: slot.start_time.length === 5 ? `${slot.start_time}:00` : slot.start_time,
+            end_time: slot.end_time.length === 5 ? `${slot.end_time}:00` : slot.end_time
+          };
+        }).filter(s => s.subject_id !== 0);
+
+        setTimetableSlots(mappedSlots);
+        
+        // Clear extracted states so we don't recreate them if they go back & forth
+        setExtractedSubjects([]);
+        setExtractedSlots([]);
+      }
+
       setStep(3); // Go to step 3 (Subjects)
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to save working week.");
@@ -334,66 +410,68 @@ const SetupWizard: React.FC = () => {
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-12 space-y-10">
         
         {/* Clickable Step Indicator with Navigation Improvements */}
-        <div className="flex items-center justify-between max-w-xl mx-auto border border-border bg-card rounded-xl p-3 shadow-[0_1px_2px_rgba(0,0,0,0.01)] text-xs text-muted-foreground font-medium">
-          <button
-            type="button"
-            onClick={() => handleStepClick(1)}
-            className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer ${step >= 1 ? "text-foreground" : ""}`}
-          >
-            <span className={`h-5 w-5 rounded-full border border-border flex items-center justify-center ${step > 1 ? "bg-foreground border-foreground text-background" : ""}`}>
-              {step > 1 ? <Check className="h-3 w-3" /> : "1"}
-            </span>
-            <span>Semester</span>
-          </button>
-          <div className="h-px bg-border flex-1 mx-1.5" />
-          <button
-            type="button"
-            disabled={!semester}
-            onClick={() => handleStepClick(2)}
-            className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${step >= 2 ? "text-foreground" : ""}`}
-          >
-            <span className={`h-5 w-5 rounded-full border border-border flex items-center justify-center ${step > 2 ? "bg-foreground border-foreground text-background" : ""}`}>
-              {step > 2 ? <Check className="h-3 w-3" /> : "2"}
-            </span>
-            <span>Week</span>
-          </button>
-          <div className="h-px bg-border flex-1 mx-1.5" />
-          <button
-            type="button"
-            disabled={!semester}
-            onClick={() => handleStepClick(3)}
-            className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${step >= 3 ? "text-foreground" : ""}`}
-          >
-            <span className={`h-5 w-5 rounded-full border border-border flex items-center justify-center ${step > 3 ? "bg-foreground border-foreground text-background" : ""}`}>
-              {step > 3 ? <Check className="h-3 w-3" /> : "3"}
-            </span>
-            <span>Subjects</span>
-          </button>
-          <div className="h-px bg-border flex-1 mx-1.5" />
-          <button
-            type="button"
-            disabled={!semester}
-            onClick={() => handleStepClick(4)}
-            className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${step >= 4 ? "text-foreground" : ""}`}
-          >
-            <span className={`h-5 w-5 rounded-full border border-border flex items-center justify-center ${step > 4 ? "bg-foreground border-foreground text-background" : ""}`}>
-              {step > 4 ? <Check className="h-3 w-3" /> : "4"}
-            </span>
-            <span>Timetable</span>
-          </button>
-          <div className="h-px bg-border flex-1 mx-1.5" />
-          <button
-            type="button"
-            disabled={!semester}
-            onClick={() => handleStepClick(5)}
-            className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${step >= 5 ? "text-foreground" : ""}`}
-          >
-            <span className="h-5 w-5 rounded-full border border-border flex items-center justify-center">
-              5
-            </span>
-            <span>Exceptions</span>
-          </button>
-        </div>
+        {setupMethod === "manual" && (
+          <div className="flex items-center justify-between max-w-xl mx-auto border border-border bg-card rounded-xl p-3 shadow-[0_1px_2px_rgba(0,0,0,0.01)] text-xs text-muted-foreground font-medium">
+            <button
+              type="button"
+              onClick={() => handleStepClick(1)}
+              className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer ${step >= 1 ? "text-foreground" : ""}`}
+            >
+              <span className={`h-5 w-5 rounded-full border border-border flex items-center justify-center ${step > 1 ? "bg-foreground border-foreground text-background" : ""}`}>
+                {step > 1 ? <Check className="h-3 w-3" /> : "1"}
+              </span>
+              <span>Semester</span>
+            </button>
+            <div className="h-px bg-border flex-1 mx-1.5" />
+            <button
+              type="button"
+              disabled={!semester}
+              onClick={() => handleStepClick(2)}
+              className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${step >= 2 ? "text-foreground" : ""}`}
+            >
+              <span className={`h-5 w-5 rounded-full border border-border flex items-center justify-center ${step > 2 ? "bg-foreground border-foreground text-background" : ""}`}>
+                {step > 2 ? <Check className="h-3 w-3" /> : "2"}
+              </span>
+              <span>Week</span>
+            </button>
+            <div className="h-px bg-border flex-1 mx-1.5" />
+            <button
+              type="button"
+              disabled={!semester}
+              onClick={() => handleStepClick(3)}
+              className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${step >= 3 ? "text-foreground" : ""}`}
+            >
+              <span className={`h-5 w-5 rounded-full border border-border flex items-center justify-center ${step > 3 ? "bg-foreground border-foreground text-background" : ""}`}>
+                {step > 3 ? <Check className="h-3 w-3" /> : "3"}
+              </span>
+              <span>Subjects</span>
+            </button>
+            <div className="h-px bg-border flex-1 mx-1.5" />
+            <button
+              type="button"
+              disabled={!semester}
+              onClick={() => handleStepClick(4)}
+              className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${step >= 4 ? "text-foreground" : ""}`}
+            >
+              <span className={`h-5 w-5 rounded-full border border-border flex items-center justify-center ${step > 4 ? "bg-foreground border-foreground text-background" : ""}`}>
+                {step > 4 ? <Check className="h-3 w-3" /> : "4"}
+              </span>
+              <span>Timetable</span>
+            </button>
+            <div className="h-px bg-border flex-1 mx-1.5" />
+            <button
+              type="button"
+              disabled={!semester}
+              onClick={() => handleStepClick(5)}
+              className={`flex items-center space-x-1.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${step >= 5 ? "text-foreground" : ""}`}
+            >
+              <span className="h-5 w-5 rounded-full border border-border flex items-center justify-center">
+                5
+              </span>
+              <span>Exceptions</span>
+            </button>
+          </div>
+        )}
 
         {/* Global Error Banner */}
         {error && (
@@ -403,9 +481,119 @@ const SetupWizard: React.FC = () => {
           </div>
         )}
 
+        {/* Choose Setup Method Option Screen */}
+        {setupMethod === "choose" && (
+          <div className="border border-border bg-card rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] text-center space-y-6 max-w-lg mx-auto">
+            <div className="space-y-2">
+              <h2 className="text-lg font-bold text-foreground">Configure Your Semester</h2>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
+                Choose how you would like to set up your semester timeline, subjects, and weekly timetable.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={() => {
+                  setSetupMethod("manual");
+                  setStep(1);
+                }}
+                className="w-full text-left border border-border bg-background p-5 rounded-xl hover:border-foreground/20 hover:bg-muted/30 transition-all cursor-pointer flex items-center justify-between animate-fade-in"
+              >
+                <div className="space-y-1 pr-4">
+                  <span className="text-xs font-semibold text-foreground block">Set Up Manually</span>
+                  <span className="text-[10px] text-muted-foreground block">
+                    Enter your semester details, subjects, and timetable slots step-by-step.
+                  </span>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+
+              <button
+                onClick={() => {
+                  setSetupMethod("ai");
+                }}
+                className="w-full text-left border border-border bg-background p-5 rounded-xl hover:border-foreground/20 hover:bg-muted/30 transition-all cursor-pointer flex items-center justify-between"
+              >
+                <div className="space-y-1 pr-4">
+                  <span className="text-xs font-semibold text-foreground block flex items-center gap-1.5">
+                    AI Timetable Import
+                    <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 rounded font-semibold uppercase tracking-wider">
+                      Gemini
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-muted-foreground block">
+                    Upload your college timetable PDF or screenshot to extract and pre-fill the setup.
+                  </span>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* AI Assisted Upload Screen */}
+        {setupMethod === "ai" && (
+          <div className="border border-border bg-card rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] space-y-6 max-w-lg mx-auto">
+            <div className="space-y-1 text-center">
+              <h2 className="text-lg font-bold text-foreground">AI Timetable Import</h2>
+              <p className="text-xs text-muted-foreground">Upload your timetable file to let Gemini extract details.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-border hover:border-foreground/20 rounded-xl p-8 text-center cursor-pointer transition-colors relative">
+                <input
+                  type="file"
+                  accept="application/pdf, image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setFileToUpload(e.target.files[0]);
+                    }
+                  }}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                />
+                <div className="space-y-2">
+                  <div className="h-10 w-10 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div className="text-xs font-medium text-foreground">
+                    {fileToUpload ? fileToUpload.name : "Click to upload or drag & drop"}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Supports PDF and image formats (PNG, JPG)</p>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-4 space-y-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">Gemini is extracting schedule details...</span>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setSetupMethod("choose");
+                      setFileToUpload(null);
+                    }}
+                    className="flex-1 py-2 px-4 border border-border hover:bg-muted text-foreground font-semibold rounded-lg text-xs transition-colors cursor-pointer text-center"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleAIUpload}
+                    disabled={!fileToUpload}
+                    className="flex-1 inline-flex items-center justify-center rounded-lg bg-primary py-2 px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    Process Timetable
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* STEP 1: CREATE SEMESTER */}
-        {step === 1 && (
-          <div className="border border-border bg-card rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] space-y-6">
+        {setupMethod === "manual" && step === 1 && (
+          <div className="border border-border bg-card rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] space-y-6 animate-fade-in">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold tracking-tight text-foreground">Semester Configuration</h2>
               <p className="text-xs text-muted-foreground">Define your current academic period timeline.</p>
@@ -460,7 +648,7 @@ const SetupWizard: React.FC = () => {
         )}
 
         {/* STEP 2: WORKING WEEK CONFIGURATION */}
-        {step === 2 && (
+        {setupMethod === "manual" && step === 2 && (
           <div className="border border-border bg-card rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] space-y-6">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold tracking-tight text-foreground">Working Week Configuration</h2>
@@ -511,7 +699,7 @@ const SetupWizard: React.FC = () => {
         )}
 
         {/* STEP 3: SUBJECTS CONFIGURATION */}
-        {step === 3 && (
+        {setupMethod === "manual" && step === 3 && (
           <div className="space-y-6">
             
             {/* Subject Input Card */}
@@ -638,7 +826,7 @@ const SetupWizard: React.FC = () => {
         )}
 
         {/* STEP 4: TIMETABLE CONFIGURATION */}
-        {step === 4 && (
+        {setupMethod === "manual" && step === 4 && (
           <div className="space-y-6">
             
             {/* Timetable Input Card */}
@@ -773,7 +961,7 @@ const SetupWizard: React.FC = () => {
         )}
 
         {/* STEP 5: ACADEMIC CALENDAR EXCEPTIONS */}
-        {step === 5 && (
+        {setupMethod === "manual" && step === 5 && (
           <div className="space-y-6">
             
             {/* Input Form Card */}

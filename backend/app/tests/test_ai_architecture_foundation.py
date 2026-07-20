@@ -223,3 +223,26 @@ def test_ai_timetable_validation():
     assert any("Duplicate subject name" in err for err in errors2)
     assert any("Start time (10:00) must be before end time (09:00)" in err for err in errors2)
     assert any("Subject 'Chemistry' is not in the subjects list" in err for err in errors2)
+
+from unittest.mock import MagicMock, patch
+from app.services.ai.provider import GeminiAIProvider
+from app.services.ai.exceptions import ExtractionError
+
+def test_gemini_provider_extraction_success():
+    mock_client_instance = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = '{"semester_name": "Autumn 2026", "start_date": "2026-08-01", "end_date": "2026-11-30", "working_days": [0, 1, 2, 3, 4], "subjects": [{"name": "A", "code": "A1", "min_attendance_percent": 75.0}], "timetable_slots": [{"subject_name": "A", "subject_code": "A1", "day_of_week": 0, "start_time": "09:00", "end_time": "10:00"}]}'
+    mock_client_instance.models.generate_content.return_value = mock_response
+
+    with patch("app.services.ai.provider.genai.Client", return_value=mock_client_instance):
+        provider = GeminiAIProvider(api_key="fake-key")
+        res = provider.extract_timetable(b"dummy bytes", "application/pdf")
+        
+        assert res["semester_name"] == "Autumn 2026"
+        assert len(res["subjects"]) == 1
+        assert res["subjects"][0]["name"] == "A"
+        mock_client_instance.models.generate_content.assert_called_once()
+
+def test_gemini_provider_missing_key():
+    with pytest.raises(ExtractionError):
+        GeminiAIProvider(api_key="")
