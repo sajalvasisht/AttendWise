@@ -63,4 +63,15 @@ export const aiService = {
     });
     return response.data;
   },
+
+  async chatWithAssistant(message: string): Promise<ChatResponse> {
+    const response = await api.post("/ai/assistant/chat", { message });
+    return response.data;
+  },
 };
+
+export interface ChatResponse {
+  reply: string;
+  intent: string;
+  clarification_needed: boolean;
+}

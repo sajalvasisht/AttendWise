@@ -8,6 +8,7 @@ import SetupWizard from "./pages/SetupWizard";
 import DailyTracker from "./pages/DailyTracker";
 import AttendanceSummary from "./pages/AttendanceSummary";
 import LeavePlanner from "./pages/LeavePlanner";
+import AIAssistant from "./pages/AIAssistant";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const App: React.FC = () => {
@@ -46,6 +47,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <LeavePlanner />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assistant"
+            element={
+              <ProtectedRoute>
+                <AIAssistant />
               </ProtectedRoute>
             }
           />

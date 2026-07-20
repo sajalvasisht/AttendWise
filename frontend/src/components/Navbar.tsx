@@ -36,6 +36,7 @@ const Navbar: React.FC = () => {
             <Link to="/tracker" className={linkClass("/tracker")}>Daily Tracker</Link>
             <Link to="/summary" className={linkClass("/summary")}>Summary</Link>
             <Link to="/planner" className={linkClass("/planner")}>Leave Planner</Link>
+            <Link to="/assistant" className={linkClass("/assistant")}>AI Assistant</Link>
             <Link to="/setup" className={linkClass("/setup")}>Setup</Link>
           </nav>
         </div>

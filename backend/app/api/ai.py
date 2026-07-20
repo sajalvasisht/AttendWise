@@ -9,7 +9,10 @@ from app.services.ai.provider import get_ai_provider
 from app.services.ai.mapping import map_raw_timetable, map_raw_calendar
 from app.services.ai.review_models import ExtractedTimetableReview, ExtractedCalendarReview
 from app.services.ai.validators import validate_timetable_review, validate_calendar_review
-from app.services.ai.schemas import ValidationResultResponse
+from app.services.ai.schemas import ValidationResultResponse, ChatMessage, ChatResponse
+from app.services.ai.assistant import process_assistant_message
+from app.models.models import Semester
+from datetime import date
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -82,3 +85,25 @@ def validate_calendar(
         success=len(errors) == 0,
         errors=errors
     )
+
+@router.post("/assistant/chat", response_model=ChatResponse)
+def assistant_chat(
+    chat_in: ChatMessage,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Chat with the AI Leave Assistant. Resolves intent/parameters,
+    invokes deterministic planner/attendance services, and formats an actionable reply.
+    """
+    semester = db.query(Semester).filter(Semester.user_id == current_user.id).first()
+    if not semester:
+        return ChatResponse(
+            reply="You haven't configured a semester yet. Please complete the Setup Wizard first so I can assist you with your attendance schedule.",
+            intent="unknown",
+            clarification_needed=False
+        )
+
+    # Resolve relative to server's current date
+    current_date = date.today()
+    return process_assistant_message(db, semester.id, chat_in.message, current_date)

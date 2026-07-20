@@ -108,7 +108,7 @@ class GeminiAIProvider(AbstractAIProvider):
             )
             
             response = self.client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-flash-latest',
                 contents=[
                     part,
                     "Extract the semester details, working week, subjects, and weekly timetable slots from this document."
@@ -138,7 +138,7 @@ class GeminiAIProvider(AbstractAIProvider):
             )
             
             response = self.client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-flash-latest',
                 contents=[
                     part,
                     "Extract all academic calendar events that affect attendance planning from this document."
