@@ -75,6 +75,10 @@ class CalendarEvent(Base):
     subject_id = Column(Integer, ForeignKey("subjects.id", ondelete="CASCADE"), nullable=True)
     start_time = Column(Time, nullable=True)
     end_time = Column(Time, nullable=True)
+    title = Column(String, nullable=True)
+    category = Column(String, nullable=True)  # "Holiday", "Assessment", "College Closure", "Working Day Override", "Other"
+    schedule_effect = Column(String, nullable=True)  # "KEEP_LECTURES", "REPLACE_LECTURES", "OVERRIDE_TIMETABLE"
+    end_date = Column(Date, nullable=True)
 
     semester = relationship("Semester", back_populates="calendar_events")
     subject = relationship("Subject")

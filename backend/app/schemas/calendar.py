@@ -5,12 +5,16 @@ from app.schemas.subject import SubjectResponse
 
 class CalendarEventBase(BaseModel):
     date: date
-    event_type: str = Field(..., description="'holiday', 'working_day_override', 'college_closure', 'exam_break', 'working_saturday', 'exam', 'exam_day'")
+    event_type: Optional[str] = Field(default="holiday", description="'holiday', 'working_day_override', 'college_closure', 'exam_break', 'working_saturday', 'exam', 'exam_day'")
     description: Optional[str] = None
     timetable_day_override: Optional[int] = None
     subject_id: Optional[int] = None
     start_time: Optional[time] = None
     end_time: Optional[time] = None
+    title: Optional[str] = None
+    category: Optional[str] = None
+    schedule_effect: Optional[str] = None
+    end_date: Optional[date] = None
 
 class CalendarEventCreate(CalendarEventBase):
     pass
