@@ -27,6 +27,20 @@ class GeminiTimetableExtraction(BaseModel):
     subjects: List[GeminiSubject]
     timetable_slots: List[GeminiTimetableSlot]
 
+class GeminiCalendarEvent(BaseModel):
+    title: str = Field(description="Title of the calendar event (e.g. Independence Day, Mid Sem Exams)")
+    date: str = Field(description="Start date of the event in YYYY-MM-DD format")
+    end_date: Optional[str] = Field(None, description="Optional end date of the event in YYYY-MM-DD format if it spans a range")
+    description: Optional[str] = Field(None, description="Optional description of the event")
+    subject_code: Optional[str] = Field(None, description="Optional subject/course code if this event is specific to a subject (e.g. CS301)")
+    subject_name: Optional[str] = Field(None, description="Optional subject/course name if this event is specific to a subject")
+    start_time: Optional[str] = Field(None, description="Optional start time in 24-hour HH:MM format if this is a time-bound assessment")
+    end_time: Optional[str] = Field(None, description="Optional end time in 24-hour HH:MM format if this is a time-bound assessment")
+    timetable_day_override: Optional[int] = Field(None, description="If this is a working day override (e.g. working Saturday running Monday slots), specify the weekday index to run: 0=Monday, 6=Sunday")
+
+class GeminiCalendarExtraction(BaseModel):
+    events: List[GeminiCalendarEvent]
+
 class MockAIProvider(AbstractAIProvider):
     """
     Mock AI Provider implementation for testing the AI pipelines.
@@ -117,7 +131,36 @@ class GeminiAIProvider(AbstractAIProvider):
             raise ExtractionError(f"Gemini timetable extraction failed: {str(e)}")
 
     def extract_calendar(self, file_bytes: bytes, file_type: str) -> Dict[str, Any]:
-        raise NotImplementedError("Calendar extraction is not implemented in Gemini provider yet.")
+        try:
+            part = types.Part.from_bytes(
+                data=file_bytes,
+                mime_type=file_type or "application/pdf"
+            )
+            
+            response = self.client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[
+                    part,
+                    "Extract all academic calendar events that affect attendance planning from this document."
+                ],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=GeminiCalendarExtraction,
+                    system_instruction=(
+                        "You are an expert academic scheduler assistant. "
+                        "Analyze the uploaded academic calendar document (PDF or image) "
+                        "and extract all events that affect the academic schedule: "
+                        "holidays, college closures, mid-semester or sessional tests, end-semester exams, "
+                        "exam breaks, working Saturdays, or timetable day overrides. "
+                        "Ignore general announcements, guest lectures, sports, workshops, or club events "
+                        "unless they explicitly cancel regular lectures. "
+                        "Provide dates in YYYY-MM-DD format. Provide times in HH:MM format if available."
+                    )
+                ),
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            raise ExtractionError(f"Gemini calendar extraction failed: {str(e)}")
 
 def get_ai_provider() -> AbstractAIProvider:
     """

@@ -246,3 +246,82 @@ def test_gemini_provider_extraction_success():
 def test_gemini_provider_missing_key():
     with pytest.raises(ExtractionError):
         GeminiAIProvider(api_key="")
+
+def test_gemini_provider_calendar_extraction_success():
+    mock_client_instance = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = '{"events": [{"title": "Midterm Exams", "date": "2026-10-10", "end_date": "2026-10-15", "description": "Sessional midterm test", "subject_code": "CS301", "subject_name": "Operating Systems", "start_time": "09:00", "end_time": "12:00", "timetable_day_override": null}]}'
+    mock_client_instance.models.generate_content.return_value = mock_response
+
+    with patch("app.services.ai.provider.genai.Client", return_value=mock_client_instance):
+        provider = GeminiAIProvider(api_key="fake-key")
+        res = provider.extract_calendar(b"dummy bytes", "application/pdf")
+        
+        assert len(res["events"]) == 1
+        assert res["events"][0]["title"] == "Midterm Exams"
+        assert res["events"][0]["date"] == "2026-10-10"
+        assert res["events"][0]["end_date"] == "2026-10-15"
+        assert res["events"][0]["subject_code"] == "CS301"
+        mock_client_instance.models.generate_content.assert_called_once()
+
+def test_calendar_mapping_layer_defaults():
+    # Test mapping default keyword sessional test -> Assessment + REPLACE_LECTURES
+    raw_data_sessional = {
+        "events": [
+            {
+                "title": "Sessional Test 1",
+                "date": "2026-10-12",
+                "description": "Mid-term sessional test"
+            }
+        ]
+    }
+    mapped_sessional = map_raw_calendar(raw_data_sessional)
+    assert mapped_sessional.events[0].category == "Assessment"
+    assert mapped_sessional.events[0].schedule_effect == "REPLACE_LECTURES"
+
+    # Test mapping default keyword formative assessment -> Assessment + KEEP_LECTURES
+    raw_data_formative = {
+        "events": [
+            {
+                "title": "Formative Assessment Quiz",
+                "date": "2026-10-13",
+                "description": "Quiz Day"
+            }
+        ]
+    }
+    mapped_formative = map_raw_calendar(raw_data_formative)
+    assert mapped_formative.events[0].category == "Assessment"
+    assert mapped_formative.events[0].schedule_effect == "KEEP_LECTURES"
+
+    # Test mapping default keyword working Saturday -> Working Day Override + OVERRIDE_TIMETABLE
+    raw_data_working = {
+        "events": [
+            {
+                "title": "Working Saturday",
+                "date": "2026-10-17",
+                "description": "Runs Monday timetable override",
+                "timetable_day_override": 0
+            }
+        ]
+    }
+    mapped_working = map_raw_calendar(raw_data_working)
+    assert mapped_working.events[0].category == "Working Day Override"
+    assert mapped_working.events[0].schedule_effect == "OVERRIDE_TIMETABLE"
+    assert mapped_working.events[0].timetable_day_override == 0
+
+    # Test multi-day event mapping is preserved
+    raw_data_multiday = {
+        "events": [
+            {
+                "title": "Autumn Break",
+                "date": "2026-10-20",
+                "end_date": "2026-10-24",
+                "description": "Holidays"
+            }
+        ]
+    }
+    mapped_multiday = map_raw_calendar(raw_data_multiday)
+    assert mapped_multiday.events[0].category == "Holiday"
+    assert mapped_multiday.events[0].schedule_effect == "REPLACE_LECTURES"
+    assert mapped_multiday.events[0].date == "2026-10-20"
+    assert mapped_multiday.events[0].end_date == "2026-10-24"

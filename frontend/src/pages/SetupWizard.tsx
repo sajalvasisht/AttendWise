@@ -31,6 +31,7 @@ const SetupWizard: React.FC = () => {
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [extractedSubjects, setExtractedSubjects] = useState<any[]>([]);
   const [extractedSlots, setExtractedSlots] = useState<any[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
   
   // Local form loading/error states
   const [loading, setLoading] = useState(false);
@@ -132,6 +133,84 @@ const SetupWizard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCalendarAIUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setError(null);
+    setCalendarLoading(true);
+
+    try {
+      const response = await aiService.extractCalendar(file);
+      
+      const mappedEvents = response.events.map(ev => {
+        let mappedType = "holiday";
+        const cat = ev.category.toLowerCase();
+        if (cat.includes("holiday")) mappedType = "holiday";
+        else if (cat.includes("closure") || cat.includes("closed")) mappedType = "college_closure";
+        else if (cat.includes("override")) mappedType = "working_day_override";
+        else if (cat.includes("assessment")) mappedType = "exam_day";
+        else if (cat.includes("break")) mappedType = "exam_break";
+        
+        let mappedSubjId: number | undefined = undefined;
+        if (ev.subject_name || ev.subject_code) {
+          const matched = subjects.find(s => 
+            (ev.subject_name && s.name.toLowerCase() === ev.subject_name.toLowerCase()) ||
+            (ev.subject_code && s.code && s.code.toLowerCase() === ev.subject_code.toLowerCase())
+          );
+          if (matched) mappedSubjId = matched.id;
+        }
+
+        return {
+          title: ev.title,
+          category: ev.category,
+          schedule_effect: ev.schedule_effect,
+          date: ev.date,
+          end_date: ev.end_date || undefined,
+          event_type: mappedType,
+          description: ev.description || ev.title,
+          timetable_day_override: ev.timetable_day_override !== undefined ? ev.timetable_day_override : undefined,
+          subject_id: mappedSubjId,
+          start_time: ev.start_time || undefined,
+          end_time: ev.end_time || undefined
+        };
+      });
+
+      setCalendarEvents(prev => [...prev, ...mappedEvents]);
+    } catch (err: any) {
+      console.error("AI Calendar upload failed", err);
+      setError(
+        err.response?.data?.detail || 
+        "Failed to extract calendar events. Please add exceptions manually."
+      );
+    } finally {
+      setCalendarLoading(false);
+      // Clear input
+      e.target.value = "";
+    }
+  };
+
+  const updateEventField = (index: number, field: string, value: any) => {
+    setCalendarEvents(prev => 
+      prev.map((event, i) => {
+        if (i === index) {
+          const updated = { ...event, [field]: value };
+          if (field === "category") {
+            const cat = value.toLowerCase();
+            let mappedType = "holiday";
+            if (cat.includes("holiday")) mappedType = "holiday";
+            else if (cat.includes("closure") || cat.includes("closed")) mappedType = "college_closure";
+            else if (cat.includes("override")) mappedType = "working_day_override";
+            else if (cat.includes("assessment")) mappedType = "exam_day";
+            else if (cat.includes("break")) mappedType = "exam_break";
+            updated.event_type = mappedType;
+          }
+          return updated;
+        }
+        return event;
+      })
+    );
   };
 
   const handleStepClick = (targetStep: number) => {
@@ -964,6 +1043,35 @@ const SetupWizard: React.FC = () => {
         {setupMethod === "manual" && step === 5 && (
           <div className="space-y-6">
             
+            {/* AI Calendar Upload Area */}
+            <div className="border border-border bg-card rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                  AI Calendar Import
+                  <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 rounded font-semibold uppercase tracking-wider">
+                    Gemini
+                  </span>
+                </h3>
+                <p className="text-xs text-muted-foreground">Upload your academic calendar PDF or screenshot to extract holidays and exams automatically.</p>
+              </div>
+
+              {calendarLoading ? (
+                <div className="flex flex-col items-center justify-center py-4 space-y-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">Gemini is extracting calendar events...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <input
+                    type="file"
+                    accept="application/pdf, image/*"
+                    onChange={handleCalendarAIUpload}
+                    className="block w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-neutral-800 cursor-pointer file:cursor-pointer"
+                  />
+                </div>
+              )}
+            </div>
+            
             {/* Input Form Card */}
             <div className="border border-border bg-card rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] space-y-6">
               <div className="space-y-1">
@@ -1087,51 +1195,101 @@ const SetupWizard: React.FC = () => {
               ) : (
                 <div className="divide-y divide-border/60">
                   {calendarEvents.map((event, idx) => {
-                    const matchedSubj = subjects.find((s) => s.id === event.subject_id);
                     return (
-                      <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                            <span className="font-semibold text-foreground">{event.date}</span>
-                            <span className={`text-[9px] border font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                              event.event_type === "holiday" ? "bg-red-500/5 text-destructive border-destructive/15" :
-                              event.event_type === "working_day_override" ? "bg-emerald-500/5 text-emerald-600 border-emerald-500/15" :
-                              event.event_type === "college_closure" ? "bg-red-500/5 text-destructive border-destructive/15" :
-                              event.event_type === "exam_break" ? "bg-amber-500/5 text-amber-600 border-amber-500/15" :
-                              event.event_type === "exam_day" ? "bg-amber-500/5 text-amber-600 border-amber-500/15" :
-                              "bg-amber-500/5 text-amber-600 border-amber-500/15"
-                            }`}>
-                              {event.event_type.replace(/_/g, " ")}
-                            </span>
-                            {event.timetable_day_override !== undefined && event.timetable_day_override !== null && (
-                              <span className="text-[9px] bg-muted text-muted-foreground border border-border/80 px-1.5 py-0.5 rounded">
-                                Runs {DAYS_OF_WEEK[event.timetable_day_override]} slots
-                              </span>
-                            )}
-                            {event.event_type === "exam_day" && (
-                              <>
-                                {matchedSubj && (
-                                  <span className="text-[9px] bg-muted text-muted-foreground border border-border/80 px-1.5 py-0.5 rounded uppercase">
-                                    {matchedSubj.code || matchedSubj.name}
-                                  </span>
-                                )}
-                                {event.start_time && (
-                                  <span className="text-[9px] text-muted-foreground flex items-center">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {event.start_time.slice(0, 5)} - {event.end_time?.slice(0, 5)}
-                                  </span>
-                                )}
-                              </>
-                            )}
+                      <div key={idx} className="py-4 first:pt-0 last:pb-0 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {/* Title Input */}
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Title</label>
+                            <input
+                              type="text"
+                              value={event.title || event.description || ""}
+                              onChange={(e) => updateEventField(idx, "title", e.target.value)}
+                              className="block w-full rounded-md border border-border bg-background py-1 px-2 text-xs text-foreground outline-none focus:border-foreground/20"
+                            />
                           </div>
-                          {event.description && <span className="text-muted-foreground text-[11px] block">{event.description}</span>}
+
+                          {/* Category select */}
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Category</label>
+                            <select
+                              value={event.category || "Holiday"}
+                              onChange={(e) => updateEventField(idx, "category", e.target.value)}
+                              className="block w-full rounded-md border border-border bg-background py-1 px-2 text-xs text-foreground outline-none cursor-pointer focus:border-foreground/20"
+                            >
+                              <option value="Holiday">Holiday</option>
+                              <option value="Assessment">Assessment</option>
+                              <option value="College Closure">College Closure</option>
+                              <option value="Working Day Override">Working Day Override</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+
+                          {/* Schedule Effect select */}
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Schedule Effect</label>
+                            <select
+                              value={event.schedule_effect || "REPLACE_LECTURES"}
+                              onChange={(e) => updateEventField(idx, "schedule_effect", e.target.value)}
+                              className="block w-full rounded-md border border-border bg-background py-1 px-2 text-xs text-foreground outline-none cursor-pointer focus:border-foreground/20"
+                            >
+                              <option value="KEEP_LECTURES">Keep Lectures</option>
+                              <option value="REPLACE_LECTURES">Replace Lectures</option>
+                              <option value="OVERRIDE_TIMETABLE">Override Timetable</option>
+                            </select>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleRemoveEvent(idx)}
-                          className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-muted cursor-pointer transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {/* Start Date */}
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Start Date</label>
+                            <input
+                              type="date"
+                              value={event.date}
+                              onChange={(e) => updateEventField(idx, "date", e.target.value)}
+                              className="block w-full rounded-md border border-border bg-background py-1 px-2 text-xs text-foreground outline-none focus:border-foreground/20"
+                            />
+                          </div>
+
+                          {/* End Date */}
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">End Date (Optional)</label>
+                            <input
+                              type="date"
+                              value={event.end_date || ""}
+                              onChange={(e) => updateEventField(idx, "end_date", e.target.value || undefined)}
+                              className="block w-full rounded-md border border-border bg-background py-1 px-2 text-xs text-foreground outline-none focus:border-foreground/20"
+                            />
+                          </div>
+
+                          {/* Timetable override index */}
+                          {(event.schedule_effect === "OVERRIDE_TIMETABLE" || event.event_type === "working_day_override") && (
+                            <div className="space-y-1">
+                              <label className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Runs Timetable</label>
+                              <select
+                                value={event.timetable_day_override !== undefined && event.timetable_day_override !== null ? event.timetable_day_override : ""}
+                                onChange={(e) => updateEventField(idx, "timetable_day_override", e.target.value === "" ? undefined : Number(e.target.value))}
+                                className="block w-full rounded-md border border-border bg-background py-1 px-2 text-xs text-foreground outline-none cursor-pointer focus:border-foreground/20"
+                              >
+                                <option value="">Default weekday</option>
+                                {DAYS_OF_WEEK.map((day, dIdx) => (
+                                  <option key={dIdx} value={dIdx}>{day}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex justify-end pt-1">
+                          <button
+                            onClick={() => handleRemoveEvent(idx)}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 py-1 px-2 rounded flex items-center gap-1.5 transition-colors cursor-pointer text-[10px] font-semibold uppercase tracking-wider border border-border/60"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Delete Event
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
