@@ -96,7 +96,15 @@ def assistant_chat(
     Chat with the AI Leave Assistant. Resolves intent/parameters,
     invokes deterministic planner/attendance services, and formats an actionable reply.
     """
-    semester = db.query(Semester).filter(Semester.user_id == current_user.id).first()
+    semester = db.query(Semester).filter(
+        Semester.user_id == current_user.id,
+        Semester.is_active == True
+    ).first()
+    if not semester:
+        semester = db.query(Semester).filter(
+            Semester.user_id == current_user.id
+        ).order_by(Semester.created_at.desc()).first()
+
     if not semester:
         return ChatResponse(
             reply="You haven't configured a semester yet. Please complete the Setup Wizard first so I can assist you with your attendance schedule.",

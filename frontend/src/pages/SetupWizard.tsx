@@ -20,7 +20,10 @@ const SetupWizard: React.FC = () => {
   const navigate = useNavigate();
 
   // Wizard state
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<number>(() => {
+    const saved = localStorage.getItem("setup_step");
+    return saved ? parseInt(saved, 10) : 1;
+  });
   const [semester, setSemester] = useState<Semester | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetableSlots, setTimetableSlots] = useState<any[]>([]);
@@ -69,18 +72,28 @@ const SetupWizard: React.FC = () => {
   // Load active semester if one already exists
   useEffect(() => {
     const checkExistingSemester = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const mode = params.get("mode");
+
+      if (mode === "new") {
+        setSemester(null);
+        setStep(1);
+        return;
+      }
+
       try {
         const sems = await semesterService.list();
-        if (sems.length > 0) {
-          const latestSem = sems[sems.length - 1];
-          setSemester(latestSem);
-          setSemName(latestSem.name);
-          setSemStart(latestSem.start_date);
-          setSemEnd(latestSem.end_date);
-          if (latestSem.working_days) {
-            setWorkingDays(latestSem.working_days.split(",").map(Number));
+        // Look for the active semester
+        const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1];
+        if (activeSem && mode !== "restart") {
+          setSemester(activeSem);
+          setSemName(activeSem.name);
+          setSemStart(activeSem.start_date);
+          setSemEnd(activeSem.end_date);
+          if (activeSem.working_days) {
+            setWorkingDays(activeSem.working_days.split(",").map(Number));
           }
-          loadSemesterData(latestSem.id);
+          loadSemesterData(activeSem.id);
           setSetupMethod("manual");
           setStep(3); // Start at step 3 (Subjects) if semester exists
         }
@@ -105,6 +118,10 @@ const SetupWizard: React.FC = () => {
       console.error("Error loading sub-resources:", err);
     }
   };
+
+  useEffect(() => {
+    localStorage.setItem("setup_step", step.toString());
+  }, [step]);
 
   const handleAIUpload = async () => {
     if (!fileToUpload) return;
@@ -452,7 +469,8 @@ const SetupWizard: React.FC = () => {
         end_time: event.end_time
       })));
 
-      navigate("/dashboard");
+      localStorage.removeItem("setup_step");
+      navigate("/setup-complete");
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to complete setup. Please check your timetable/calendar inputs.");
     } finally {

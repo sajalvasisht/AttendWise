@@ -6,8 +6,8 @@ import { plannerService } from "../services/planner";
 import type { SimulationResponse } from "../services/planner";
 import { calendarService } from "../services/calendar";
 import type { CalendarEvent } from "../services/calendar";
-import { 
-  Calendar, Plus, Trash2, Loader2, AlertCircle, CheckCircle2, AlertTriangle, ArrowRight
+import {
+  Plus, Trash2, Loader2, AlertCircle, CheckCircle2, AlertTriangle, ArrowRight, Compass
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -31,7 +31,7 @@ const LeavePlanner: React.FC = () => {
         if (sems.length === 0) {
           navigate("/setup");
         } else {
-          const activeSem = sems[0];
+          const activeSem = sems.find(s => s.is_active) || sems[0];
           setSemester(activeSem);
           fetchCalendarEvents(activeSem.id);
         }
@@ -235,11 +235,16 @@ const LeavePlanner: React.FC = () => {
             <div className="md:col-span-2 space-y-6">
               
               {!simulation ? (
-                <div className="rounded-xl border border-border border-dashed bg-card p-12 text-center text-xs text-muted-foreground space-y-3">
-                  <Calendar className="h-8 w-8 text-muted-foreground/60 mx-auto" />
-                  <p className="max-w-sm mx-auto leading-relaxed">
-                    Select leave dates on the left panel, and run the simulator to project the attendance impact on your courses.
-                  </p>
+                <div className="rounded-2xl border border-border border-dashed bg-card p-12 text-center text-xs text-muted-foreground space-y-4 animate-scale-in">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mx-auto">
+                    <Compass className="h-5 w-5 animate-pulse" />
+                  </div>
+                  <div className="space-y-1.5 max-w-sm mx-auto">
+                    <h4 className="text-xs font-bold text-foreground">Ready to Simulate Absences</h4>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Select target leave dates on the left panel, then run the simulator to project the attendance impact on your courses.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">

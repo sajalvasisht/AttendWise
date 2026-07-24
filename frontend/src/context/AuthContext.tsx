@@ -5,6 +5,7 @@ import { authService } from "../services/auth";
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => void;
 }
@@ -60,12 +61,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    setState((prev) => ({ ...prev, loading: true }));
+    try {
+      const data = await authService.googleLogin(credential);
+      localStorage.setItem("token", data.access_token);
+      await loadUser(data.access_token);
+    } catch (error) {
+      setState((prev) => ({ ...prev, loading: false }));
+      throw error;
+    }
+  };
+
   const register = async (userData: any) => {
     setState((prev) => ({ ...prev, loading: true }));
     try {
       await authService.register(userData);
-      // Automatically log in after registration
-      await login(userData.email, userData.password);
+      setState((prev) => ({ ...prev, loading: false }));
     } catch (error) {
       setState((prev) => ({ ...prev, loading: false }));
       throw error;
@@ -83,7 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout }}>
+    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

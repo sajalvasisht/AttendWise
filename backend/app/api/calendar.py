@@ -8,7 +8,7 @@ from app.models.models import CalendarEvent, Semester, User
 from app.schemas.calendar import CalendarEventCreate, CalendarEventResponse
 from app.api.deps import get_current_user
 from app.services.occurrence_generator import generate_occurrences
-from app.api.subjects import verify_semester_owner
+from app.api.subjects import verify_semester_owner, verify_active_semester
 
 router = APIRouter(prefix="/semesters/{semester_id}/calendar", tags=["calendar"])
 
@@ -28,7 +28,7 @@ def save_calendar_events(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    verify_semester_owner(semester_id, current_user.id, db)
+    verify_active_semester(semester_id, current_user.id, db)
 
     # Delete existing calendar events to refresh
     db.query(CalendarEvent).filter(CalendarEvent.semester_id == semester_id).delete()

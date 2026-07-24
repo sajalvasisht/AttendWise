@@ -17,12 +17,16 @@ def create_semester(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
+    # Deactivate all other semesters for the user
+    db.query(Semester).filter(Semester.user_id == current_user.id).update({"is_active": False})
+
     db_semester = Semester(
         user_id=current_user.id,
         name=semester_in.name,
         start_date=semester_in.start_date,
         end_date=semester_in.end_date,
-        working_days=semester_in.working_days
+        working_days=semester_in.working_days,
+        is_active=True
     )
     db.add(db_semester)
     db.commit()
@@ -35,7 +39,26 @@ def read_semesters(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     return db.query(Semester).filter(Semester.user_id == current_user.id).all()
+@router.get("/active", response_model=SemesterResponse)
+def read_active_semester(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    semester = db.query(Semester).filter(
+        Semester.user_id == current_user.id,
+        Semester.is_active == True
+    ).first()
+    if not semester:
+        semester = db.query(Semester).filter(
+            Semester.user_id == current_user.id
+        ).order_by(Semester.created_at.desc()).first()
 
+    if not semester:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active semester found"
+        )
+    return semester
 @router.get("/{semester_id}", response_model=SemesterResponse)
 def read_semester(
     semester_id: int,
@@ -99,3 +122,29 @@ def delete_semester(
     db.delete(semester)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.post("/{semester_id}/activate", response_model=SemesterResponse)
+def activate_semester(
+    semester_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    # Verify semester exists
+    semester = db.query(Semester).filter(
+        Semester.id == semester_id,
+        Semester.user_id == current_user.id
+    ).first()
+    if not semester:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Semester not found"
+        )
+
+    # Deactivate all other semesters
+    db.query(Semester).filter(Semester.user_id == current_user.id).update({"is_active": False})
+
+    # Activate selected
+    semester.is_active = True
+    db.commit()
+    db.refresh(semester)
+    return semester

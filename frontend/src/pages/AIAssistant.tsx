@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { aiService } from "../services/ai";
-import { Send, AlertCircle, Bot, User, Clock } from "lucide-react";
+import { Send, AlertCircle, Bot, User, Clock, Sparkles } from "lucide-react";
 
 interface Message {
   id: string;
@@ -109,31 +109,61 @@ const AIAssistant: React.FC = () => {
         )}
 
         {/* Messages List Area */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex items-start space-x-3 max-w-[85%] ${
-                msg.sender === "user" ? "ml-auto flex-row-reverse space-x-reverse" : "mr-auto"
-              }`}
-            >
-              <div className={`h-7 w-7 rounded-full flex items-center justify-center border text-xs shrink-0 ${
-                msg.sender === "user" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
-              }`}>
-                {msg.sender === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin flex flex-col">
+          {messages.length <= 1 ? (
+            <div className="flex-1 flex flex-col justify-center items-center py-12 text-center max-w-sm mx-auto space-y-5 animate-scale-in">
+              <div className="h-11 w-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm">
+                <Sparkles className="h-5 w-5 animate-pulse" />
               </div>
-              <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.01)] ${
-                msg.sender === "user" 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-card border border-border text-foreground"
-              }`}>
-                {msg.text}
+              <div className="space-y-1.5">
+                <h3 className="text-sm font-bold text-foreground">Start chatting with the AI Assistant</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Query your attendance standing, predict safe bunks, or simulate planned leaves in natural language.
+                </p>
+              </div>
+
+              {/* Suggestion Chips */}
+              <div className="pt-2 flex flex-wrap gap-2 justify-center">
+                {suggestions.map((s, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleChipClick(s)}
+                    className="text-[10px] font-semibold border border-border bg-card hover:bg-muted/80 text-muted-foreground hover:text-foreground py-1.5 px-3.5 rounded-full transition-all cursor-pointer shadow-sm hover:shadow-[0_1.5px_3px_rgba(0,0,0,0.015)]"
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
-          ))}
+          ) : (
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex items-start space-x-3 max-w-[85%] ${
+                    msg.sender === "user" ? "ml-auto flex-row-reverse space-x-reverse" : "mr-auto"
+                  }`}
+                >
+                  <div className={`h-7 w-7 rounded-full flex items-center justify-center border text-xs shrink-0 ${
+                    msg.sender === "user" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
+                  }`}>
+                    {msg.sender === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                  </div>
+                  <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.01)] ${
+                    msg.sender === "user" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-card border border-border text-foreground"
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {loading && (
-            <div className="flex items-start space-x-3 mr-auto max-w-[85%]">
+            <div className="flex items-start space-x-3 mr-auto max-w-[85%] mt-2 animate-scale-in">
               <div className="h-7 w-7 rounded-full flex items-center justify-center border border-border bg-card text-xs shrink-0">
                 <Bot className="h-3.5 w-3.5" />
               </div>
@@ -146,21 +176,6 @@ const AIAssistant: React.FC = () => {
           )}
           <div ref={messagesEndRef} />
         </div>
-
-        {/* Suggestion Chips */}
-        {messages.length === 1 && (
-          <div className="py-4 flex flex-wrap gap-2 justify-center">
-            {suggestions.map((s, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleChipClick(s)}
-                className="text-[10px] font-medium border border-border/80 hover:border-foreground/20 bg-card hover:bg-muted/40 text-muted-foreground hover:text-foreground py-1.5 px-3 rounded-full transition-all cursor-pointer"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Input Bar */}
         <div className="mt-4 pt-3 border-t border-border/60">

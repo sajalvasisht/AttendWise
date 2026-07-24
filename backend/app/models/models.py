@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Time, ForeignKey, DateTime, Float
+from sqlalchemy import Column, Integer, String, Date, Time, ForeignKey, DateTime, Float, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database.session import Base
@@ -8,8 +8,14 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)
     full_name = Column(String, nullable=True)
+    is_verified = Column(Boolean, default=False, nullable=False)
+    verification_token = Column(String, nullable=True)
+    reset_token = Column(String, nullable=True)
+    reset_token_expires_at = Column(DateTime(timezone=True), nullable=True)
+    google_id = Column(String, unique=True, index=True, nullable=True)
+    profile_picture = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     semesters = relationship("Semester", back_populates="user", cascade="all, delete-orphan")
@@ -24,6 +30,7 @@ class Semester(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     working_days = Column(String, default="0,1,2,3,4", nullable=False)  # comma separated day indexes (0=Mon, 6=Sun)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="semesters")
@@ -43,6 +50,8 @@ class Subject(Base):
     code = Column(String, nullable=True)
     faculty = Column(String, nullable=True)
     min_attendance_percent = Column(Float, default=75.0, nullable=False)
+    initial_conducted = Column(Integer, default=None, nullable=True)
+    initial_attended = Column(Integer, default=None, nullable=True)
 
     semester = relationship("Semester", back_populates="subjects")
     timetable_slots = relationship("TimetableSlot", back_populates="subject", cascade="all, delete-orphan")

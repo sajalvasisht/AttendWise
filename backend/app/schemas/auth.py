@@ -11,6 +11,8 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: int
+    is_verified: bool
+    profile_picture: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -22,3 +24,20 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
+
+class GoogleLoginRequest(BaseModel):
+    credential: str
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str

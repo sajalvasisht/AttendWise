@@ -7,6 +7,7 @@ export interface Semester {
   end_date: string;
   working_days: string;
   user_id: number;
+  is_active: boolean;
 }
 
 export const semesterService = {

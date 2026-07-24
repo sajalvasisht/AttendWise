@@ -15,6 +15,8 @@ from app.services.ai.assistant import (
     BaseIntentHandler
 )
 from app.core.security import get_password_hash
+from app.core.config import settings
+settings.GEMINI_API_KEY = ""
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})

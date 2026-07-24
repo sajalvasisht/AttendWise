@@ -92,3 +92,73 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #D5D5D0;
 }
+
+.dark {
+    --background: #0B0B0C;
+    --foreground: #F3F3F5;
+    
+    --card: #141416;
+    --card-foreground: #F3F3F5;
+    
+    --popover: #141416;
+    --popover-foreground: #F3F3F5;
+    
+    --primary: #F3F3F5;
+    --primary-foreground: #0B0B0C;
+    
+    --secondary: #1F1F22;
+    --secondary-foreground: #F3F3F5;
+    
+    --muted: #1A1A1C;
+    --muted-foreground: #8C8C90;
+    
+    --accent: #242427;
+    --accent-foreground: #F3F3F5;
+    
+    --destructive: #E14E50;
+    --destructive-foreground: #FAFAF8;
+    
+    --border: #242427;
+    --input: #242427;
+    --ring: #F3F3F5;
+}
+
+/* Page Transition Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.975); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(12deg); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-wave {
+  animation: wave 1.5s ease-in-out infinite;
+  display: inline-block;
+  transform-origin: 70% 70%;
+}

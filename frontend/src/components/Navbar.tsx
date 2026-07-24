@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { GraduationCap, LogOut } from "lucide-react";
+import { GraduationCap, LogOut, Search } from "lucide-react";
+import { SearchOverlay } from "./SearchOverlay";
+import { NotificationCenter } from "./NotificationCenter";
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -37,23 +40,49 @@ const Navbar: React.FC = () => {
             <Link to="/summary" className={linkClass("/summary")}>Summary</Link>
             <Link to="/planner" className={linkClass("/planner")}>Leave Planner</Link>
             <Link to="/assistant" className={linkClass("/assistant")}>AI Assistant</Link>
-            <Link to="/setup" className={linkClass("/setup")}>Setup</Link>
+            <Link to="/settings" className={linkClass("/settings")}>Settings</Link>
           </nav>
         </div>
 
-        <div className="flex items-center space-x-6">
-          <span className="hidden sm:inline text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-            {user?.full_name || user?.email}
-          </span>
+        <div className="flex items-center space-x-3.5">
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="h-8 w-8 rounded-lg border border-border bg-background hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-sm"
+            title="Global Search"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+
+          <NotificationCenter />
+
+          <Link to="/settings" className="flex items-center space-x-2.5 group">
+            {user?.profile_picture ? (
+              <img
+                src={user.profile_picture}
+                alt="Profile"
+                className="h-7 w-7 rounded-full object-cover border border-border group-hover:border-foreground/20 transition-all"
+              />
+            ) : (
+              <div className="h-7 w-7 rounded-full bg-accent text-accent-foreground border border-border flex items-center justify-center text-xs font-bold uppercase group-hover:border-foreground/20 transition-all">
+                {(user?.full_name || user?.email || "U")[0]}
+              </div>
+            )}
+            <span className="hidden sm:inline text-xs text-muted-foreground group-hover:text-foreground font-semibold transition-colors">
+              {user?.full_name || user?.email}
+            </span>
+          </Link>
+
           <button
             onClick={logout}
             className="flex items-center space-x-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 px-2.5 rounded-lg hover:bg-muted cursor-pointer"
           >
             <LogOut className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Logout</span>
+            <span className="hidden md:inline">Logout</span>
           </button>
         </div>
       </div>
+      {/* Global Search Overlay */}
+      <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </header>
   );
 };

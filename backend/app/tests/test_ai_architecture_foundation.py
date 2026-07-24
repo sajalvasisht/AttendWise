@@ -161,7 +161,8 @@ def test_refined_calendar_event_date_range(db_session):
     assert occurrences[0].date == date(2026, 9, 9)
 
 def test_mock_ai_provider_mapping():
-    provider = get_ai_provider()
+    from app.services.ai.provider import MockAIProvider
+    provider = MockAIProvider()
     raw_timetable = provider.extract_timetable(b"", "")
     timetable_review = map_raw_timetable(raw_timetable)
 

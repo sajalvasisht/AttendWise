@@ -16,6 +16,7 @@ class SubjectAttendanceStats(BaseModel):
     min_attendance_percent: float
     safe_bunks: int
     required_to_attend: int
+    is_initialized: bool = True
 
 class OverallAttendanceStats(BaseModel):
     total_lectures: int
@@ -26,6 +27,7 @@ class OverallAttendanceStats(BaseModel):
     conducted: int
     attendance_percent: float
     safe_bunks_budget: int
+    is_initialized: bool = True
 
 class SemesterAttendanceSummary(BaseModel):
     overall: OverallAttendanceStats

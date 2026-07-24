@@ -28,3 +28,11 @@ class UpcomingDaySchedule(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SubjectInitialization(BaseModel):
+    subject_id: int
+    initial_conducted: int = Field(..., ge=0)
+    initial_attended: int = Field(..., ge=0)
+
+class AttendanceInitializationRequest(BaseModel):
+    initializations: List[SubjectInitialization]

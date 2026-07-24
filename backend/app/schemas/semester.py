@@ -16,10 +16,12 @@ class SemesterUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     working_days: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class SemesterResponse(SemesterBase):
     id: int
     user_id: int
+    is_active: bool
 
     class Config:
         from_attributes = True

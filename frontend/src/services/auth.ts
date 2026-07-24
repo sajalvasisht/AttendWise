@@ -22,4 +22,24 @@ export const authService = {
     const response = await api.get("/auth/me");
     return response.data;
   },
+
+  async googleLogin(credential: string): Promise<{ access_token: string; token_type: string }> {
+    const response = await api.post("/auth/google", { credential });
+    return response.data;
+  },
+
+  async verifyEmail(token: string): Promise<any> {
+    const response = await api.post("/auth/verify-email", { token });
+    return response.data;
+  },
+
+  async forgotPassword(email: string): Promise<any> {
+    const response = await api.post("/auth/forgot-password", { email });
+    return response.data;
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<any> {
+    const response = await api.post("/auth/reset-password", { token, new_password: newPassword });
+    return response.data;
+  },
 };

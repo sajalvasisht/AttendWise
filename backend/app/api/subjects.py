@@ -21,6 +21,15 @@ def verify_semester_owner(semester_id: int, user_id: int, db: Session) -> Semest
         )
     return semester
 
+def verify_active_semester(semester_id: int, user_id: int, db: Session) -> Semester:
+    semester = verify_semester_owner(semester_id, user_id, db)
+    if not semester.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot modify a completed or inactive semester. Previous semesters are read-only."
+        )
+    return semester
+
 @router.post("", response_model=SubjectResponse, status_code=status.HTTP_201_CREATED)
 def create_subject(
     semester_id: int,
@@ -28,7 +37,7 @@ def create_subject(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    verify_semester_owner(semester_id, current_user.id, db)
+    verify_active_semester(semester_id, current_user.id, db)
     db_subject = Subject(
         semester_id=semester_id,
         name=subject_in.name,
@@ -58,7 +67,7 @@ def update_subject(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    verify_semester_owner(semester_id, current_user.id, db)
+    verify_active_semester(semester_id, current_user.id, db)
     subject = db.query(Subject).filter(
         Subject.id == subject_id,
         Subject.semester_id == semester_id
@@ -83,7 +92,7 @@ def delete_subject(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Response:
-    verify_semester_owner(semester_id, current_user.id, db)
+    verify_active_semester(semester_id, current_user.id, db)
     subject = db.query(Subject).filter(
         Subject.id == subject_id,
         Subject.semester_id == semester_id

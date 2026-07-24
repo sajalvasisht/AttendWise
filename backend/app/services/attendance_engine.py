@@ -16,30 +16,37 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
     cancelled = sum(1 for occ in occurrences if occ.attendance_status == "cancelled")
     unmarked = sum(1 for occ in occurrences if occ.attendance_status == "unmarked")
     
-    conducted = present + absent
+    init_conducted = subject.initial_conducted if subject.initial_conducted is not None else 0
+    init_attended = subject.initial_attended if subject.initial_attended is not None else 0
+    is_initialized = (subject.initial_conducted is not None) or (present + absent > 0)
+    
+    conducted = present + absent + init_conducted
+    attended = present + init_attended
     
     if conducted == 0:
         percent = 100.0
     else:
-        percent = round((present / conducted) * 100.0, 2)
+        percent = round((attended / conducted) * 100.0, 2)
 
     min_percent = subject.min_attendance_percent
     M = min_percent / 100.0
 
-    # Calculate safe bunks (additional lectures that can be missed)
-    # Formula: safe_bunks = floor(present + unmarked - M * (conducted + unmarked))
-    safe_bunks = math.floor(present + unmarked - M * (conducted + unmarked))
-    if safe_bunks < 0:
+    # Calculate safe bunks (additional lectures that can be missed *currently*)
+    # Formula: safe_bunks = floor(attended - M * conducted)
+    if conducted == 0:
         safe_bunks = 0
+    else:
+        safe_bunks = math.floor(attended - M * conducted)
+        if safe_bunks < 0:
+            safe_bunks = 0
 
     # Calculate required consecutive classes to attend to reach threshold if currently below it
     required_to_attend = 0
-    if percent < min_percent:
+    if percent < min_percent and conducted > 0:
         denominator_diff = 1.0 - M
         if denominator_diff > 0:
-            numerator = M * conducted - present
+            numerator = M * conducted - attended
             required_to_attend = math.ceil(numerator / denominator_diff)
-            # Ensure it is at least 0
             required_to_attend = max(0, required_to_attend)
 
     return {
@@ -48,15 +55,16 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
         "code": subject.code,
         "faculty": subject.faculty,
         "total_lectures": total,
-        "attended": present,
-        "absent": absent,
+        "attended": attended,
+        "absent": absent + (init_conducted - init_attended),
         "cancelled": cancelled,
         "unmarked": unmarked,
         "conducted": conducted,
-        "attendance_percent": percent,
+        "attendance_percent": percent if is_initialized else 0.0,
         "min_attendance_percent": min_percent,
-        "safe_bunks": safe_bunks,
-        "required_to_attend": required_to_attend
+        "safe_bunks": safe_bunks if is_initialized else 0,
+        "required_to_attend": required_to_attend if is_initialized else 0,
+        "is_initialized": is_initialized
     }
 
 def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
@@ -81,13 +89,14 @@ def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
         unmarked += stats["unmarked"]
         conducted += stats["conducted"]
 
+    is_initialized = len(subjects) > 0 and all(stats["is_initialized"] for stats in subject_stats)
+
     if conducted == 0:
         overall_percent = 100.0
     else:
         overall_percent = round((attended / conducted) * 100.0, 2)
 
-    # Overall attendance budget is the sum of safe bunks for each subject
-    overall_safe_bunks = sum(stats["safe_bunks"] for stats in subject_stats)
+    overall_safe_bunks = sum(stats["safe_bunks"] for stats in subject_stats) if is_initialized else 0
 
     return {
         "overall": {
@@ -97,8 +106,9 @@ def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
             "cancelled": cancelled,
             "unmarked": unmarked,
             "conducted": conducted,
-            "attendance_percent": overall_percent,
-            "safe_bunks_budget": overall_safe_bunks
+            "attendance_percent": overall_percent if is_initialized else 0.0,
+            "safe_bunks_budget": overall_safe_bunks,
+            "is_initialized": is_initialized
         },
         "subjects": subject_stats
     }

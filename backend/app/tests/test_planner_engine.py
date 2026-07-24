@@ -56,12 +56,12 @@ def test_planner_leave_simulation(db_session):
     res = simulate_leaves(db_session, semester.id, simulation_dates)
 
     # Check overall projections
-    # Current conducted = 2, attended = 2 -> 100%. Safe bunks: floor(2 + 2 - 0.75 * 4) = floor(4 - 3) = 1.
+    # Current conducted = 2, attended = 2 -> 100%. Safe bunks: floor(2 - 0.75 * 2) = 0
     # Projected conducted = 4 (since future unmarked are simulated as absent, they count as conducted), present = 2 -> 50%
     # Projected safe bunks: floor(2 + 0 - 0.75 * 4) = floor(2 - 3) = -1 -> 0
     assert res["overall"]["current_percent"] == 100.0
     assert res["overall"]["projected_percent"] == 50.0
-    assert res["overall"]["current_safe_bunks"] == 1
+    assert res["overall"]["current_safe_bunks"] == 0
     assert res["overall"]["projected_safe_bunks"] == 0
 
     # Check subject projections

@@ -4,10 +4,10 @@ from typing import List, Any, Optional
 from datetime import date, timedelta
 
 from app.database.session import get_db
-from app.models.models import LectureOccurrence, User, CalendarEvent, Semester
-from app.schemas.attendance import LectureOccurrenceResponse, AttendanceUpdate, UpcomingDaySchedule
+from app.models.models import LectureOccurrence, User, CalendarEvent, Semester, Subject
+from app.schemas.attendance import LectureOccurrenceResponse, AttendanceUpdate, UpcomingDaySchedule, AttendanceInitializationRequest
 from app.api.deps import get_current_user
-from app.api.subjects import verify_semester_owner
+from app.api.subjects import verify_semester_owner, verify_active_semester
 from app.schemas.attendance_summary import OverallAttendanceStats, SubjectAttendanceStats
 from app.services.attendance_engine import calculate_semester_summary
 
@@ -17,15 +17,22 @@ router = APIRouter(prefix="/semesters/{semester_id}/attendance", tags=["attendan
 def read_lecture_occurrences(
     semester_id: int,
     date_query: Optional[date] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    # We will verify ownership of the semester
     verify_semester_owner(semester_id, current_user.id, db)
+
+    if start_date and end_date:
+        return db.query(LectureOccurrence).filter(
+            LectureOccurrence.semester_id == semester_id,
+            LectureOccurrence.date >= start_date,
+            LectureOccurrence.date <= end_date
+        ).order_by(LectureOccurrence.date, LectureOccurrence.start_time).all()
     
     target_date = date_query if date_query else date.today()
     
-    # Query occurrences for the specific date
     return db.query(LectureOccurrence).filter(
         LectureOccurrence.semester_id == semester_id,
         LectureOccurrence.date == target_date
@@ -53,7 +60,7 @@ def update_occurrence_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    verify_semester_owner(semester_id, current_user.id, db)
+    verify_active_semester(semester_id, current_user.id, db)
     
     occurrence = db.query(LectureOccurrence).filter(
         LectureOccurrence.id == occurrence_id,
@@ -156,3 +163,24 @@ def read_upcoming_schedule(
         })
         
     return upcoming_days
+
+@router.post("/initialize", status_code=status.HTTP_200_OK)
+def initialize_attendance(
+    semester_id: int,
+    init_in: AttendanceInitializationRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    verify_active_semester(semester_id, current_user.id, db)
+    
+    for init in init_in.initializations:
+        subject = db.query(Subject).filter(
+            Subject.id == init.subject_id,
+            Subject.semester_id == semester_id
+        ).first()
+        if subject:
+            subject.initial_conducted = init.initial_conducted
+            subject.initial_attended = init.initial_attended
+            
+    db.commit()
+    return {"message": "Attendance successfully initialized"}

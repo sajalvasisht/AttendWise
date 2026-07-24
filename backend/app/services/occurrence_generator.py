@@ -22,8 +22,17 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
     # Delete existing future/unmarked occurrences on or after start_from_date
     db.query(LectureOccurrence).filter(
         LectureOccurrence.semester_id == semester_id,
-        LectureOccurrence.date >= start_from_date
+        LectureOccurrence.date >= start_from_date,
+        LectureOccurrence.attendance_status == "unmarked"
     ).delete()
+
+    # Load marked occurrences on or after start_from_date to preserve them
+    marked_exist = db.query(LectureOccurrence).filter(
+        LectureOccurrence.semester_id == semester_id,
+        LectureOccurrence.date >= start_from_date,
+        LectureOccurrence.attendance_status != "unmarked"
+    ).all()
+    marked_keys = {(o.subject_id, o.date, o.start_time, o.end_time) for o in marked_exist}
 
     # Load slots and calendar events
     slots = db.query(TimetableSlot).filter(TimetableSlot.semester_id == semester_id).all()
@@ -84,16 +93,18 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
         if is_working:
             day_slots = [s for s in slots if s.day_of_week == timetable_weekday]
             for slot in day_slots:
-                new_occurrences.append(
-                    LectureOccurrence(
-                        semester_id=semester_id,
-                        subject_id=slot.subject_id,
-                        date=current_date,
-                        start_time=slot.start_time,
-                        end_time=slot.end_time,
-                        attendance_status="unmarked"
+                key = (slot.subject_id, current_date, slot.start_time, slot.end_time)
+                if key not in marked_keys:
+                    new_occurrences.append(
+                        LectureOccurrence(
+                            semester_id=semester_id,
+                            subject_id=slot.subject_id,
+                            date=current_date,
+                            start_time=slot.start_time,
+                            end_time=slot.end_time,
+                            attendance_status="unmarked"
+                        )
                     )
-                )
 
         current_date += delta
 

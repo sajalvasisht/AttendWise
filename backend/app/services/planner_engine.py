@@ -19,20 +19,25 @@ def simulate_leaves(db: Session, semester_id: int, dates: List[date]) -> Dict[st
         ).order_by(LectureOccurrence.date, LectureOccurrence.start_time).all()
         
         missed_lectures = []
-        
-        # 3. Simulate absences for occurrences on these dates
+        target_ids = {occ.id for occ in target_occurrences if occ.attendance_status not in ("cancelled", "absent")}
+
+        # Treat all unmarked occurrences as present to calculate future possibilities
+        unmarked_occurrences = db.query(LectureOccurrence).filter(
+            LectureOccurrence.semester_id == semester_id,
+            LectureOccurrence.attendance_status == "unmarked"
+        ).all()
+        for occ in unmarked_occurrences:
+            occ.attendance_status = "present"
+
+        # Simulate absences for target occurrences on these dates
         for occ in target_occurrences:
-            # Only count as missed if it was present or unmarked (i.e. classes that are scheduled to run)
-            # If already marked absent, it's not a new miss. If cancelled, it's not conducted.
-            if occ.attendance_status not in ("cancelled", "absent"):
+            if occ.id in target_ids:
                 missed_lectures.append({
                     "subject_name": occ.subject.name,
                     "date": occ.date,
                     "start_time": occ.start_time,
                     "end_time": occ.end_time
                 })
-                
-                # Update status in session memory
                 occ.attendance_status = "absent"
 
         # If we updated occurrences, flush them to the session so subsequent queries see them

@@ -21,6 +21,7 @@ export interface OverallAttendanceStats {
   conducted: number;
   attendance_percent: number;
   safe_bunks_budget: number;
+  is_initialized: boolean;
 }
 
 export interface SubjectAttendanceStats {
@@ -38,6 +39,7 @@ export interface SubjectAttendanceStats {
   min_attendance_percent: number;
   safe_bunks: number;
   required_to_attend: number;
+  is_initialized: boolean;
 }
 
 export interface UpcomingDaySchedule {
@@ -51,6 +53,12 @@ export interface UpcomingDaySchedule {
 export const attendanceService = {
   async getByDate(semesterId: number, dateStr?: string): Promise<LectureOccurrence[]> {
     const params = dateStr ? { date_query: dateStr } : {};
+    const response = await api.get(`/semesters/${semesterId}/attendance`, { params });
+    return response.data;
+  },
+
+  async getByRange(semesterId: number, startDate: string, endDate: string): Promise<LectureOccurrence[]> {
+    const params = { start_date: startDate, end_date: endDate };
     const response = await api.get(`/semesters/${semesterId}/attendance`, { params });
     return response.data;
   },
@@ -77,6 +85,14 @@ export const attendanceService = {
 
   async getUpcoming(semesterId: number): Promise<UpcomingDaySchedule[]> {
     const response = await api.get(`/semesters/${semesterId}/attendance/upcoming`);
+    return response.data;
+  },
+
+  async initializeAttendance(
+    semesterId: number,
+    initializations: { subject_id: number; initial_conducted: number; initial_attended: number }[]
+  ): Promise<any> {
+    const response = await api.post(`/semesters/${semesterId}/attendance/initialize`, { initializations });
     return response.data;
   },
 };

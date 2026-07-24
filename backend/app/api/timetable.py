@@ -8,7 +8,7 @@ from app.models.models import TimetableSlot, Semester, User
 from app.schemas.timetable import TimetableSlotCreate, TimetableSlotResponse
 from app.api.deps import get_current_user
 from app.services.occurrence_generator import generate_occurrences
-from app.api.subjects import verify_semester_owner
+from app.api.subjects import verify_semester_owner, verify_active_semester
 
 router = APIRouter(prefix="/semesters/{semester_id}/timetable", tags=["timetable"])
 
@@ -28,7 +28,7 @@ def save_timetable_slots(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    verify_semester_owner(semester_id, current_user.id, db)
+    verify_active_semester(semester_id, current_user.id, db)
 
     # Delete existing slots for the semester to refresh
     db.query(TimetableSlot).filter(TimetableSlot.semester_id == semester_id).delete()
