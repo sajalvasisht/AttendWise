@@ -64,7 +64,8 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
         "min_attendance_percent": min_percent,
         "safe_bunks": safe_bunks if is_initialized else 0,
         "required_to_attend": required_to_attend if is_initialized else 0,
-        "is_initialized": is_initialized
+        "is_initialized": is_initialized,
+        "units_per_class": subject.units_per_class
     }
 
 def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:

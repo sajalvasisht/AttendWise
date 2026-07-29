@@ -126,7 +126,8 @@ const LeavePlanner: React.FC = () => {
       };
     }
 
-    if (simulation.warnings.length > 0 || simulation.overall.projected_safe_bunks === 0) {
+    const projSafeClasses = simulation.subjects.reduce((sum, s) => sum + Math.floor(s.projected_safe_bunks / (s.units_per_class || 1)), 0);
+    if (simulation.warnings.length > 0 || projSafeClasses === 0) {
       return {
         label: "Warning",
         color: "text-amber-600",
@@ -414,9 +415,13 @@ const LeavePlanner: React.FC = () => {
                       <div className="space-y-1.5">
                         <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Safe Bunk Budget</span>
                         <div className="flex items-center justify-center space-x-2 text-base font-bold">
-                          <span className="text-muted-foreground line-through font-normal">{simulation.overall.current_safe_bunks}</span>
+                          <span className="text-muted-foreground line-through font-normal">
+                            {simulation.subjects.reduce((sum, s) => sum + Math.floor(s.current_safe_bunks / (s.units_per_class || 1)), 0)}
+                          </span>
                           <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-foreground">{simulation.overall.projected_safe_bunks}</span>
+                          <span className="text-foreground">
+                            {simulation.subjects.reduce((sum, s) => sum + Math.floor(s.projected_safe_bunks / (s.units_per_class || 1)), 0)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -464,10 +469,10 @@ const LeavePlanner: React.FC = () => {
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-muted-foreground">Safe Bunks</span>
                               <div className="flex items-center space-x-1.5 font-semibold">
-                                <span>{subj.current_safe_bunks}</span>
+                                <span>{Math.floor(subj.current_safe_bunks / (subj.units_per_class || 1))}</span>
                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                                 <span className={subj.projected_safe_bunks < subj.current_safe_bunks ? "text-destructive" : "text-foreground"}>
-                                  {subj.projected_safe_bunks}
+                                  {Math.floor(subj.projected_safe_bunks / (subj.units_per_class || 1))}
                                 </span>
                               </div>
                             </div>

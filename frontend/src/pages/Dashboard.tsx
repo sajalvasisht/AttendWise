@@ -383,7 +383,7 @@ const Dashboard: React.FC = () => {
                       {subjects.length > 0 ? (subjects.reduce((sum, s) => sum + s.attendance_percent, 0) / subjects.length).toFixed(1) : "0.0"}%
                     </h2>
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      Safe Bunks Budget: {subjects.reduce((sum, s) => sum + s.safe_bunks, 0)} classes
+                      Safe Bunks Budget: {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes
                     </p>
                   </div>
                 )}
@@ -574,10 +574,10 @@ const Dashboard: React.FC = () => {
                               <span className="text-muted-foreground">Status:</span>
                               <span className={`font-semibold ${statusColor}`}>
                                 {isBelow 
-                                  ? `Attend next ${subj.required_to_attend} classes`
+                                  ? `Attend next ${Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))} classes`
                                   : isWarning
                                     ? "Cannot miss any class"
-                                    : `Can bunk ${subj.safe_bunks} classes`
+                                    : `Can bunk ${Math.floor(subj.safe_bunks / (subj.units_per_class || 1))} ${Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"}`
                                 }
                               </span>
                             </div>

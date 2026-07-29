@@ -17,6 +17,7 @@ class SubjectProjection(BaseModel):
     is_safe: bool
     recovery_required: bool
     required_to_attend: int
+    units_per_class: int = 1
 
 class OverallProjection(BaseModel):
     current_percent: float

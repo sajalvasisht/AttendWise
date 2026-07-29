@@ -9,8 +9,8 @@ import Navbar from "../components/Navbar";
 const InitializeAttendance: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [semesterId, setSemesterId] = useState<number | null>(null);
-  const [conductedValues, setConductedValues] = useState<Record<number, number>>({});
-  const [attendedValues, setAttendedValues] = useState<Record<number, number>>({});
+  const [conductedValues, setConductedValues] = useState<Record<number, number | "">>({});
+  const [attendedValues, setAttendedValues] = useState<Record<number, number | "">>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +32,8 @@ const InitializeAttendance: React.FC = () => {
       setSubjects(subList);
       
       // Initialize states
-      const conducted: Record<number, number> = {};
-      const attended: Record<number, number> = {};
+      const conducted: Record<number, number | ""> = {};
+      const attended: Record<number, number | ""> = {};
       subList.forEach((s: Subject) => {
         conducted[s.id] = 0;
         attended[s.id] = 0;
@@ -58,8 +58,9 @@ const InitializeAttendance: React.FC = () => {
     fetchSemesterAndSubjects();
   }, []);
 
-  const handleValChange = (subjectId: number, type: "conducted" | "attended", val: number) => {
+  const handleValChange = (subjectId: number, type: "conducted" | "attended", valStr: string) => {
     setError(null);
+    const val = valStr === "" ? "" : Math.max(0, parseInt(valStr) || 0);
     if (type === "conducted") {
       setConductedValues((prev) => ({ ...prev, [subjectId]: val }));
     } else {
@@ -73,8 +74,8 @@ const InitializeAttendance: React.FC = () => {
 
     // Validate: attended <= conducted for all subjects
     for (const sub of subjects) {
-      const cond = conductedValues[sub.id] || 0;
-      const att = attendedValues[sub.id] || 0;
+      const cond = conductedValues[sub.id] === "" ? 0 : (conductedValues[sub.id] as number) || 0;
+      const att = attendedValues[sub.id] === "" ? 0 : (attendedValues[sub.id] as number) || 0;
       if (att > cond) {
         setError(`For subject "${sub.name}", classes attended cannot exceed classes conducted.`);
         return;
@@ -87,8 +88,8 @@ const InitializeAttendance: React.FC = () => {
     try {
       const payload = subjects.map((s) => ({
         subject_id: s.id,
-        initial_conducted: conductedValues[s.id] || 0,
-        initial_attended: attendedValues[s.id] || 0,
+        initial_conducted: conductedValues[s.id] === "" ? 0 : (conductedValues[s.id] as number) || 0,
+        initial_attended: attendedValues[s.id] === "" ? 0 : (attendedValues[s.id] as number) || 0,
       }));
       await attendanceService.initializeAttendance(semesterId, payload);
       navigate("/dashboard");
@@ -165,12 +166,12 @@ const InitializeAttendance: React.FC = () => {
                         <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                           Conducted
                         </label>
-                        <input
+                         <input
                           type="number"
                           min="0"
                           required
                           value={conductedValues[sub.id]}
-                          onChange={(e) => handleValChange(sub.id, "conducted", Math.max(0, parseInt(e.target.value) || 0))}
+                          onChange={(e) => handleValChange(sub.id, "conducted", e.target.value)}
                           className="w-24 rounded-lg border border-border bg-background py-1.5 px-3 text-xs text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
                         />
                       </div>
@@ -185,7 +186,7 @@ const InitializeAttendance: React.FC = () => {
                           min="0"
                           required
                           value={attendedValues[sub.id]}
-                          onChange={(e) => handleValChange(sub.id, "attended", Math.max(0, parseInt(e.target.value) || 0))}
+                          onChange={(e) => handleValChange(sub.id, "attended", e.target.value)}
                           className="w-24 rounded-lg border border-border bg-background py-1.5 px-3 text-xs text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
                         />
                       </div>

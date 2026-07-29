@@ -7,7 +7,7 @@ import type { LectureOccurrence } from "../services/attendance";
 import { calendarService } from "../services/calendar";
 import type { CalendarEvent } from "../services/calendar";
 import { 
-  Clock, Loader2, ChevronLeft, ChevronRight, AlertCircle, Brain, Calendar as CalendarIcon
+  Clock, Loader2, ChevronLeft, ChevronRight, AlertCircle, Brain, Calendar as CalendarIcon, X, Eye
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -28,6 +28,9 @@ const DailyTracker: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Side Drawer view state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Load active semester on mount
   useEffect(() => {
@@ -106,6 +109,7 @@ const DailyTracker: React.FC = () => {
     const newDateStr = dateObj.toLocaleDateString("en-CA");
     setSelectedDate(newDateStr);
     setCurrentMonth(new Date(dateObj.getFullYear(), dateObj.getMonth(), 1));
+    setIsDrawerOpen(true);
   };
 
   // Update Status handler
@@ -175,19 +179,25 @@ const DailyTracker: React.FC = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1));
   };
 
+  const handleDayClick = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    setIsDrawerOpen(true);
+  };
+
   const calendarDays = getCalendarDays();
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const todayStr = new Date().toLocaleDateString("en-CA");
 
   return (
     <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col font-sans">
       <Navbar />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10 space-y-8">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10 space-y-8 relative">
         
         {/* Header */}
         <div className="border-b border-border/80 pb-4">
           <h1 className="text-xl font-bold tracking-tight">Daily Tracker & Calendar</h1>
-          <p className="text-xs text-muted-foreground">Mark attendance checklist, schedule exceptions, or plan semester dates.</p>
+          <p className="text-xs text-muted-foreground font-medium">Click any calendar cell to view timing details and log course attendance statuses.</p>
         </div>
 
         {/* Global Error Banner */}
@@ -216,7 +226,11 @@ const DailyTracker: React.FC = () => {
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
-                onClick={() => setCurrentMonth(new Date())}
+                onClick={() => {
+                  const today = new Date();
+                  setCurrentMonth(today);
+                  setSelectedDate(today.toLocaleDateString("en-CA"));
+                }}
                 className="text-[10px] font-semibold px-2 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 Today
@@ -248,9 +262,9 @@ const DailyTracker: React.FC = () => {
 
               const formatted = day.toLocaleDateString("en-CA");
               const isSelected = selectedDate === formatted;
-              const isToday = new Date().toLocaleDateString("en-CA") === formatted;
+              const isToday = todayStr === formatted;
               
-              // Filter occurrences for this day to show small color indicators
+              // Filter occurrences for this day
               const dayOccs = monthOccurrences.filter(o => o.date === formatted);
               
               // Find calendar exceptions
@@ -259,17 +273,46 @@ const DailyTracker: React.FC = () => {
               const isExam = dayEv && (dayEv.event_type === "exam_day" || dayEv.event_type === "exam");
               const isLeave = dayEv && dayEv.event_type === "leave";
 
+              // Color-coding class evaluation
+              let colorClass = "border-border/80 bg-background hover:bg-muted/40 hover:border-foreground/10";
+              
+              if (isSelected) {
+                colorClass = "bg-primary border-primary text-primary-foreground shadow-md";
+              } else if (isHoliday) {
+                colorClass = "bg-emerald-500/5 border-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/10";
+              } else if (isExam) {
+                colorClass = "bg-amber-500/5 border-amber-500/20 text-amber-800 dark:text-amber-300 hover:bg-amber-500/10";
+              } else if (isLeave) {
+                colorClass = "bg-blue-500/5 border-blue-500/20 text-blue-800 dark:text-blue-300 hover:bg-blue-500/10";
+              } else if (dayOccs.length > 0) {
+                const hasAbsent = dayOccs.some(occ => occ.attendance_status === "absent");
+                const hasPresent = dayOccs.some(occ => occ.attendance_status === "present");
+                const allCancelled = dayOccs.every(occ => occ.attendance_status === "cancelled");
+                
+                if (hasAbsent) {
+                  colorClass = "bg-destructive/5 border-destructive/20 text-destructive dark:text-red-300 hover:bg-destructive/10";
+                } else if (hasPresent) {
+                  colorClass = "bg-emerald-500/5 border-emerald-500/25 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10";
+                } else if (allCancelled) {
+                  colorClass = "bg-amber-500/5 border-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
+                } else if (formatted > todayStr) {
+                  // Future Lectures
+                  colorClass = "border-dashed border-border/80 bg-muted/10 text-muted-foreground/80 hover:bg-muted/20";
+                }
+              } else if (formatted > todayStr) {
+                // Future days with no schedule slots
+                colorClass = "opacity-60 border-border/50 bg-background text-muted-foreground/70";
+              }
+
+              if (isToday && !isSelected) {
+                colorClass += " ring-1 ring-primary/45 border-primary/50";
+              }
+
               return (
                 <button
                   key={formatted}
-                  onClick={() => setSelectedDate(formatted)}
-                  className={`aspect-square rounded-xl border flex flex-col justify-between p-2 text-left relative transition-all cursor-pointer ${
-                    isSelected
-                      ? "bg-primary border-primary text-primary-foreground shadow-sm"
-                      : isToday
-                      ? "border-primary bg-muted/20 text-foreground"
-                      : "border-border/80 bg-background text-foreground hover:bg-muted/40 hover:border-foreground/10"
-                  }`}
+                  onClick={() => handleDayClick(formatted)}
+                  className={`aspect-square rounded-xl border flex flex-col justify-between p-2 text-left relative transition-all cursor-pointer ${colorClass}`}
                 >
                   <span className="text-xs font-bold leading-none">{day.getDate()}</span>
 
@@ -282,7 +325,6 @@ const DailyTracker: React.FC = () => {
                     ) : isLeave ? (
                       <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-primary-foreground" : "bg-blue-500"}`} title="Leave" />
                     ) : dayOccs.length > 0 ? (
-                      // Show dots for status
                       dayOccs.map(occ => {
                         let dotColor = "bg-muted-foreground/35";
                         if (occ.attendance_status === "present") dotColor = isSelected ? "bg-primary-foreground" : "bg-emerald-500";
@@ -304,147 +346,191 @@ const DailyTracker: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. DAILY DETAIL & CHECKLIST */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Checklist Left Panel (Today's Summary Details) */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border/60 pb-2">
-              Selected Date Summary
-            </h3>
-            
-            <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block">Conducted Check</span>
-                <h4 className="text-sm font-bold text-foreground leading-normal">
-                  {new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </h4>
-              </div>
-
-              {/* Adjust selected date buttons */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => adjustDate(-1)}
-                  className="flex-1 rounded-lg border border-border bg-background hover:bg-muted py-2 text-xs font-bold text-foreground cursor-pointer flex justify-center items-center space-x-1"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  <span>Previous Day</span>
-                </button>
-                <button
-                  onClick={() => adjustDate(1)}
-                  className="flex-1 rounded-lg border border-border bg-background hover:bg-muted py-2 text-xs font-bold text-foreground cursor-pointer flex justify-center items-center space-x-1"
-                >
-                  <span>Next Day</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
+        {/* Informative helper banner in main viewport */}
+        <div className="bg-muted/40 border border-border/80 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3 text-xs">
+            <Eye className="h-4.5 w-4.5 text-muted-foreground/80" />
+            <span className="text-muted-foreground font-medium">Click any calendar date to display and log status changes in a clean overlay drawer.</span>
           </div>
+          <button 
+            onClick={() => setIsDrawerOpen(true)}
+            className="text-[10px] font-bold text-primary border border-border bg-card px-2.5 py-1 rounded-lg hover:bg-muted transition-colors cursor-pointer"
+          >
+            Open Selected Date
+          </button>
+        </div>
 
-          {/* Checklist Right Panel (Actual Lectures Checklist) */}
-          <div className="md:col-span-2 space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border/60 pb-2">
-              Checklist & Lectures
-            </h3>
+        {/* 2. SIDE DRAWER WITH LECTURE DETAILS AND CHECKLIST EDITING */}
+        {isDrawerOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm transition-opacity" 
+              onClick={() => setIsDrawerOpen(false)}
+            />
 
-            {loading ? (
-              <div className="flex flex-col justify-center items-center py-16 space-y-3">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <p className="text-[10px] text-muted-foreground">Loading day schedule...</p>
-              </div>
-            ) : dayExam ? (
-              <div className="border border-border bg-card rounded-xl p-8 text-center space-y-4 shadow-sm animate-scale-in">
-                <div className="mx-auto h-12 w-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
-                  <Brain className="h-6 w-6" />
-                </div>
+            {/* Drawer */}
+            <div className="fixed top-0 right-0 z-50 h-full w-full sm:max-w-md border-l border-border bg-card shadow-2xl flex flex-col justify-between animate-scale-in text-foreground">
+              
+              {/* Drawer Header */}
+              <div className="p-6 border-b border-border/60 flex items-center justify-between">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-foreground">{dayExam.description || "Examination Session"}</h4>
-                  <p className="text-xs text-muted-foreground">
-                    {dayExam.start_time ? `${dayExam.start_time.slice(0, 5)} - ${dayExam.end_time?.slice(0, 5)}` : "All Day Session"}
-                  </p>
+                  <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider block">Checked Date</span>
+                  <h3 className="text-sm font-bold text-foreground">
+                    {new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </h3>
                 </div>
-                <div className="text-[11px] text-amber-600 font-semibold uppercase tracking-wider bg-amber-500/5 py-1 px-3 rounded-full inline-block">
-                  Good luck for your exam
-                </div>
+                <button 
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="h-8 w-8 rounded-lg border border-border bg-background hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-            ) : dayHoliday ? (
-              <div className="border border-border bg-card rounded-xl p-8 text-center space-y-3 shadow-sm animate-scale-in">
-                <div className="mx-auto h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
-                  <CalendarIcon className="h-5 w-5" />
-                </div>
-                <h4 className="text-sm font-semibold text-foreground">{dayHoliday.description || "Holiday"}</h4>
-                <div className="text-[11px] text-emerald-600 font-semibold uppercase tracking-wider bg-emerald-500/5 py-1 px-3 rounded-full inline-block">
-                  Enjoy your day off
-                </div>
-              </div>
-            ) : isWeekend() && occurrences.length === 0 ? (
-              <div className="border border-border bg-card rounded-xl p-8 text-center space-y-2 shadow-sm animate-scale-in">
-                <h4 className="text-sm font-semibold text-foreground">Weekend</h4>
-                <p className="text-xs text-muted-foreground">No lectures scheduled today.</p>
-              </div>
-            ) : occurrences.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-10 text-center text-xs text-muted-foreground italic">
-                No classes scheduled for this date.
-              </div>
-            ) : (
-              <div className="space-y-3 animate-scale-in">
-                {occurrences.map((occ) => {
-                  const isUpdating = updatingId === occ.id;
-                  
-                  return (
-                    <div 
-                      key={occ.id} 
-                      className={`rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-sm ${
-                        isUpdating ? "opacity-60 pointer-events-none" : ""
-                      }`}
-                    >
-                      {/* Lecture Metadata */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="text-xs font-bold text-foreground">{occ.subject.name}</h4>
-                          {occ.subject.code && (
-                            <span className="text-[9px] bg-muted border border-border/85 text-muted-foreground px-1.5 py-0.2 rounded font-mono uppercase">
-                              {occ.subject.code}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center text-[10px] text-muted-foreground space-x-1.5">
-                          <Clock className="h-3.5 w-3.5" />
-                          <span>{occ.start_time.slice(0, 5)} - {occ.end_time.slice(0, 5)}</span>
-                        </div>
-                      </div>
 
-                      {/* Attendance Selectors */}
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {["present", "absent", "cancelled"].map((status) => (
-                          <button
-                            key={status}
-                            onClick={() => handleStatusChange(occ.id, occ.attendance_status === status ? "unmarked" : (status as any))}
-                            className={`text-[10px] font-bold py-1.5 px-3 rounded-lg border transition-all cursor-pointer uppercase tracking-wider ${
-                              occ.attendance_status === status
-                                ? status === "present"
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : status === "absent"
-                                    ? "bg-destructive text-destructive-foreground border-destructive"
-                                    : "bg-amber-500 text-white border-amber-500"
-                                : "bg-background border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+              {/* Drawer Body (Content) */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                
+                {/* Date Navigator Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => adjustDate(-1)}
+                    className="flex-1 rounded-lg border border-border bg-background hover:bg-muted py-2 text-xs font-bold text-foreground cursor-pointer flex justify-center items-center space-x-1"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <span>Previous Day</span>
+                  </button>
+                  <button
+                    onClick={() => adjustDate(1)}
+                    className="flex-1 rounded-lg border border-border bg-background hover:bg-muted py-2 text-xs font-bold text-foreground cursor-pointer flex justify-center items-center space-x-1"
+                  >
+                    <span>Next Day</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                {/* Day status warnings / banners */}
+                {dayExam && (
+                  <div className="border border-border bg-muted/40 rounded-xl p-5 text-center space-y-4 shadow-sm animate-scale-in">
+                    <div className="mx-auto h-11 w-11 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
+                      <Brain className="h-5.5 w-5.5" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-foreground">{dayExam.description || "Examination Session"}</h4>
+                      <p className="text-[10px] text-muted-foreground">
+                        {dayExam.start_time ? `${dayExam.start_time.slice(0, 5)} - ${dayExam.end_time?.slice(0, 5)}` : "All Day Session"}
+                      </p>
+                    </div>
+                    <div className="text-[10px] text-amber-600 font-bold uppercase tracking-wider bg-amber-500/5 py-1 px-3 rounded-full inline-block">
+                      Good luck for your exam
+                    </div>
+                  </div>
+                )}
+
+                {dayHoliday && (
+                  <div className="border border-border bg-muted/40 rounded-xl p-5 text-center space-y-3 shadow-sm animate-scale-in">
+                    <div className="mx-auto h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
+                      <CalendarIcon className="h-5 w-5" />
+                    </div>
+                    <h4 className="text-xs font-bold text-foreground">{dayHoliday.description || "Holiday Exception"}</h4>
+                    <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider bg-emerald-500/5 py-1 px-3 rounded-full inline-block">
+                      Enjoy your day off
+                    </div>
+                  </div>
+                )}
+
+                {/* Checklist & Lecture Listings */}
+                <div className="space-y-3">
+                  <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider block">Timetable Slots ({occurrences.length})</span>
+                  
+                  {loading ? (
+                    <div className="flex flex-col justify-center items-center py-16 space-y-3">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
+                      <p className="text-[10px] text-muted-foreground">Loading day schedule...</p>
+                    </div>
+                  ) : isWeekend() && occurrences.length === 0 ? (
+                    <div className="border border-border bg-muted/20 rounded-xl p-6 text-center space-y-1.5 animate-scale-in text-muted-foreground">
+                      <h4 className="text-xs font-semibold text-foreground">Weekend Exception</h4>
+                      <p className="text-[10px]">No weekly lectures scheduled on weekends.</p>
+                    </div>
+                  ) : occurrences.length === 0 ? (
+                    <div className="rounded-xl border border-border bg-muted/10 p-10 text-center text-xs text-muted-foreground italic">
+                      No classes scheduled for this date.
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5 animate-scale-in">
+                      {occurrences.map((occ) => {
+                        const isUpdating = updatingId === occ.id;
+                        
+                        return (
+                          <div 
+                            key={occ.id} 
+                            className={`rounded-xl border border-border bg-muted/20 p-4 flex flex-col justify-between gap-3.5 transition-all ${
+                              isUpdating ? "opacity-60 pointer-events-none" : ""
                             }`}
                           >
-                            {status}
-                          </button>
-                        ))}
-                      </div>
+                            {/* Lecture metadata */}
+                            <div className="space-y-1.5">
+                              <div className="flex items-center space-x-2">
+                                <h4 className="text-xs font-bold text-foreground">{occ.subject.name}</h4>
+                                {occ.subject.code && (
+                                  <span className="text-[9px] bg-muted border border-border/80 text-muted-foreground px-1.5 py-0.2 rounded font-mono uppercase">
+                                    {occ.subject.code}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center text-[10px] text-muted-foreground space-x-1.5">
+                                <Clock className="h-3.5 w-3.5" />
+                                <span>{occ.start_time.slice(0, 5)} - {occ.end_time.slice(0, 5)}</span>
+                              </div>
+                            </div>
+
+                            {/* Status controls */}
+                            <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/40">
+                              {["present", "absent", "cancelled"].map((status) => (
+                                <button
+                                  key={status}
+                                  onClick={() => handleStatusChange(occ.id, occ.attendance_status === status ? "unmarked" : (status as any))}
+                                  className={`text-[9px] font-bold py-1.5 px-3 rounded-lg border transition-all cursor-pointer uppercase tracking-wider ${
+                                    occ.attendance_status === status
+                                      ? status === "present"
+                                        ? "bg-primary text-primary-foreground border-primary"
+                                        : status === "absent"
+                                          ? "bg-destructive text-destructive-foreground border-destructive"
+                                          : "bg-amber-500 text-white border-amber-500"
+                                      : "bg-background border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  {status}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+
               </div>
-            )}
-          </div>
-        </div>
+
+              {/* Drawer Footer */}
+              <div className="p-6 border-t border-border/60 bg-muted/20 flex justify-end">
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="rounded-lg bg-primary py-2 px-5 text-xs font-bold text-primary-foreground hover:bg-neutral-800 transition-colors cursor-pointer"
+                >
+                  Close Panel
+                </button>
+              </div>
+
+            </div>
+          </>
+        )}
 
       </main>
     </div>

@@ -17,6 +17,7 @@ class SubjectAttendanceStats(BaseModel):
     safe_bunks: int
     required_to_attend: int
     is_initialized: bool = True
+    units_per_class: int = 1
 
 class OverallAttendanceStats(BaseModel):
     total_lectures: int

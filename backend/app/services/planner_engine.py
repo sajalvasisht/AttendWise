@@ -84,7 +84,8 @@ def simulate_leaves(db: Session, semester_id: int, dates: List[date]) -> Dict[st
             "projected_safe_bunks": proj_subj["safe_bunks"],
             "is_safe": is_safe,
             "recovery_required": recovery_required,
-            "required_to_attend": proj_subj["required_to_attend"]
+            "required_to_attend": proj_subj["required_to_attend"],
+            "units_per_class": curr_subj["units_per_class"]
         })
         
         # Add warning if it falls below the minimum requirement after the simulation

@@ -116,7 +116,7 @@ const AttendanceSummary: React.FC = () => {
                     <span className="font-medium text-muted-foreground">Remaining Safe Bunks (Semester Overall)</span>
                   </div>
                   <span className="text-sm font-bold text-foreground">
-                    {overall.safe_bunks_budget} classes
+                    {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes
                   </span>
                 </div>
               </div>
@@ -131,8 +131,16 @@ const AttendanceSummary: React.FC = () => {
               </div>
 
               {subjects.length === 0 ? (
-                <div className="rounded-xl border border-border bg-card p-8 text-center text-xs text-muted-foreground italic">
-                  No courses found. Complete the setup wizard to add courses.
+                <div className="rounded-2xl border border-border bg-card p-10 text-center text-xs text-muted-foreground space-y-4 max-w-sm mx-auto shadow-sm animate-scale-in">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mx-auto">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-bold text-foreground">No Courses Tracked</h4>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      You haven't defined any subjects for the current semester. Please run the setup wizard or initialize your attendance baseline to begin tracking.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -199,14 +207,14 @@ const AttendanceSummary: React.FC = () => {
                             <div className="text-destructive font-medium bg-destructive/5 border border-destructive/10 rounded-lg p-2.5 flex items-start space-x-2">
                               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                               <span>
-                                Below threshold! You must attend the next <strong className="font-bold underline">{subj.required_to_attend}</strong> classes consecutively to recover.
+                                Below threshold! You must attend the next <strong className="font-bold underline">{Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))}</strong> {Math.ceil(subj.required_to_attend / (subj.units_per_class || 1)) === 1 ? "class" : "classes"} consecutively to recover.
                               </span>
                             </div>
                           ) : (
                             <div className="text-muted-foreground bg-muted/30 border border-border/40 rounded-lg p-2.5 flex items-start space-x-2">
                               <BookOpen className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
                               <span>
-                                Safe Bunk: You can miss <strong className="font-bold text-foreground">{subj.safe_bunks}</strong> more lectures safely.
+                                Safe Bunk: You can miss <strong className="font-bold text-foreground">{Math.floor(subj.safe_bunks / (subj.units_per_class || 1))}</strong> more {Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"} safely.
                               </span>
                             </div>
                           )}

@@ -40,6 +40,7 @@ export interface SubjectAttendanceStats {
   safe_bunks: number;
   required_to_attend: number;
   is_initialized: boolean;
+  units_per_class: number;
 }
 
 export interface UpcomingDaySchedule {

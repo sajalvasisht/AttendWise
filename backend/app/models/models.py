@@ -50,6 +50,7 @@ class Subject(Base):
     code = Column(String, nullable=True)
     faculty = Column(String, nullable=True)
     min_attendance_percent = Column(Float, default=75.0, nullable=False)
+    units_per_class = Column(Integer, default=1, nullable=False)
     initial_conducted = Column(Integer, default=None, nullable=True)
     initial_attended = Column(Integer, default=None, nullable=True)
 

@@ -11,6 +11,7 @@ export interface SubjectProjection {
   is_safe: boolean;
   recovery_required: boolean;
   required_to_attend: number;
+  units_per_class: number;
 }
 
 export interface OverallProjection {

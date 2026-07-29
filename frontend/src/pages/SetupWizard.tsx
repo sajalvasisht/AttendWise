@@ -52,7 +52,9 @@ const SetupWizard: React.FC = () => {
   const [subjName, setSubjName] = useState("");
   const [subjCode, setSubjCode] = useState("");
   const [subjFaculty, setSubjFaculty] = useState("");
-  const [subjMinAtt, setSubjMinAtt] = useState(75);
+  const [subjMinAtt, setSubjMinAtt] = useState<number | "">(75);
+  const [subjUnitsPerClass, setSubjUnitsPerClass] = useState<number | "custom">(1);
+  const [customUnits, setCustomUnits] = useState<number>(3);
 
   // Step 4: Timetable Input Form
   const [selectedDay, setSelectedDay] = useState(0);
@@ -346,7 +348,8 @@ const SetupWizard: React.FC = () => {
         name: subjName,
         code: subjCode || undefined,
         faculty: subjFaculty || undefined,
-        min_attendance_percent: subjMinAtt,
+        min_attendance_percent: subjMinAtt === "" ? 75 : Number(subjMinAtt),
+        units_per_class: subjUnitsPerClass === "custom" ? customUnits : subjUnitsPerClass,
       });
       setSubjects([...subjects, added]);
       
@@ -354,6 +357,8 @@ const SetupWizard: React.FC = () => {
       setSubjCode("");
       setSubjFaculty("");
       setSubjMinAtt(75);
+      setSubjUnitsPerClass(1);
+      setCustomUnits(3);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to add subject.");
     } finally {
@@ -850,10 +855,46 @@ const SetupWizard: React.FC = () => {
                       min="0"
                       max="100"
                       value={subjMinAtt}
-                      onChange={(e) => setSubjMinAtt(Number(e.target.value))}
+                      onChange={(e) => setSubjMinAtt(e.target.value === "" ? "" : Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
                       className="block w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
                     />
                   </div>
+                  
+                  {/* Attendance Units Per Class */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Attendance Units Per Class</label>
+                    <select
+                      value={subjUnitsPerClass}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "custom") {
+                          setSubjUnitsPerClass("custom");
+                          setCustomUnits(3);
+                        } else {
+                          setSubjUnitsPerClass(Number(val));
+                        }
+                      }}
+                      className="block w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
+                    >
+                      <option value="1">1 Unit (Default)</option>
+                      <option value="2">2 Units</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+
+                  {subjUnitsPerClass === "custom" && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Custom Units Count</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={customUnits}
+                        onChange={(e) => setCustomUnits(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="block w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <button
