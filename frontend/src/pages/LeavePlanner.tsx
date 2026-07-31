@@ -413,7 +413,7 @@ const LeavePlanner: React.FC = () => {
                       </div>
 
                       <div className="space-y-1.5">
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Safe Bunk Budget</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Attendance Margin</span>
                         <div className="flex items-center justify-center space-x-2 text-base font-bold">
                           <span className="text-muted-foreground line-through font-normal">
                             {simulation.subjects.reduce((sum, s) => sum + Math.floor(s.current_safe_bunks / (s.units_per_class || 1)), 0)}
@@ -451,7 +451,7 @@ const LeavePlanner: React.FC = () => {
                                   ? "bg-destructive/10 text-destructive border border-destructive/10" 
                                   : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/10"
                               }`}>
-                                {subj.recovery_required ? "Bunk Danger" : "Safe"}
+                                 {subj.recovery_required ? "Warning" : "Safe"}
                               </span>
                             </div>
 
@@ -467,7 +467,7 @@ const LeavePlanner: React.FC = () => {
                             </div>
 
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">Safe Bunks</span>
+                              <span className="text-muted-foreground">Safe Absences</span>
                               <div className="flex items-center space-x-1.5 font-semibold">
                                 <span>{Math.floor(subj.current_safe_bunks / (subj.units_per_class || 1))}</span>
                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />

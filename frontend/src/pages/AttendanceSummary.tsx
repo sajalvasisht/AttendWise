@@ -113,7 +113,7 @@ const AttendanceSummary: React.FC = () => {
                 <div className="mt-4 border border-border bg-muted/30 rounded-lg p-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3 text-xs">
                     <Calculator className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-muted-foreground">Remaining Safe Bunks (Semester Overall)</span>
+                    <span className="font-medium text-muted-foreground">Remaining Safe Absences (Semester Overall)</span>
                   </div>
                   <span className="text-sm font-bold text-foreground">
                     {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes
@@ -201,7 +201,7 @@ const AttendanceSummary: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Safe Bunk calculation notification */}
+                        {/* Safe Absence calculation notification */}
                         <div className="text-xs pt-1">
                           {isBelow ? (
                             <div className="text-destructive font-medium bg-destructive/5 border border-destructive/10 rounded-lg p-2.5 flex items-start space-x-2">
@@ -214,7 +214,7 @@ const AttendanceSummary: React.FC = () => {
                             <div className="text-muted-foreground bg-muted/30 border border-border/40 rounded-lg p-2.5 flex items-start space-x-2">
                               <BookOpen className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
                               <span>
-                                Safe Bunk: You can miss <strong className="font-bold text-foreground">{Math.floor(subj.safe_bunks / (subj.units_per_class || 1))}</strong> more {Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"} safely.
+                                Attendance Margin: You can safely miss <strong className="font-bold text-foreground">{Math.floor(subj.safe_bunks / (subj.units_per_class || 1))}</strong> more {Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"} safely.
                               </span>
                             </div>
                           )}

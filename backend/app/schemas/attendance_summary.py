@@ -18,6 +18,8 @@ class SubjectAttendanceStats(BaseModel):
     required_to_attend: int
     is_initialized: bool = True
     units_per_class: int = 1
+    units_earned_per_class: int = 1
+    units_lost_per_class: int = 1
 
 class OverallAttendanceStats(BaseModel):
     total_lectures: int

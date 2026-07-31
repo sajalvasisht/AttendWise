@@ -279,16 +279,10 @@ const Settings: React.FC = () => {
                 {/* Active Semester Quick Options */}
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => navigate("/setup?step=4")}
-                    className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted transition-all cursor-pointer"
+                    onClick={() => navigate("/manage-setup")}
+                    className="rounded-lg bg-zinc-900 py-1.5 px-3.5 text-xs font-semibold text-white hover:bg-zinc-800 transition-all cursor-pointer"
                   >
-                    Replace Timetable
-                  </button>
-                  <button
-                    onClick={() => navigate("/setup?step=5")}
-                    className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted transition-all cursor-pointer"
-                  >
-                    Replace Calendar
+                    Manage Setup
                   </button>
                   <button
                     onClick={() => navigate("/initialize-attendance")}
@@ -301,7 +295,7 @@ const Settings: React.FC = () => {
                     className="rounded-lg border border-destructive/20 bg-destructive/5 text-destructive px-2.5 py-1.5 text-[11px] font-semibold hover:bg-destructive/10 transition-all cursor-pointer flex items-center space-x-1"
                   >
                     <RotateCcw className="h-3 w-3" />
-                    <span>Restart Setup</span>
+                    <span>Reset Setup</span>
                   </button>
                 </div>
               </div>
@@ -509,7 +503,7 @@ const Settings: React.FC = () => {
           <div className="max-w-md w-full border border-border bg-card rounded-xl p-6 shadow-lg space-y-4 animate-scale-in">
             <div className="flex items-center space-x-2.5 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              <h3 className="text-sm font-bold">Restart Setup Wizard?</h3>
+              <h3 className="text-sm font-bold">Reset Active Semester Setup?</h3>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               This will permanently delete the current active semester, all configured subjects, timetable slots, and marked attendance records. **This action cannot be undone.**
@@ -525,7 +519,7 @@ const Settings: React.FC = () => {
                 onClick={handleRestartSetup}
                 className="rounded-lg bg-destructive py-1.5 px-3.5 text-xs font-bold text-white hover:bg-destructive-hover cursor-pointer"
               >
-                Yes, Delete & Restart
+                Yes, Reset Setup
               </button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { authService } from "../services/auth";
-import { Loader2, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 
 const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -34,60 +34,60 @@ const VerifyEmail: React.FC = () => {
   }, [token]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased flex flex-col items-center justify-center p-6 font-sans">
-      <div className="max-w-md w-full border border-border bg-card rounded-xl p-8 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-6 text-center">
-        
-        {/* Logo/Header */}
-        <div className="space-y-1">
-          <h2 className="text-sm font-semibold tracking-tight text-muted-foreground uppercase">AttendWise</h2>
-          <h1 className="text-xl font-bold tracking-tight">Account Verification</h1>
-        </div>
+    <>
+      {/* Typographic Header */}
+      <div className="space-y-2.5">
+        <h2 className="text-2xl font-bold tracking-tight text-zinc-900 font-sans">Account Verification</h2>
+        <p className="text-xs text-zinc-400 font-medium">Activate your AttendWise account.</p>
+      </div>
 
+      <div className="space-y-6">
         {verifying ? (
-          <div className="space-y-3 py-6 flex flex-col items-center">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
-            <p className="text-xs text-muted-foreground">Verifying email authenticity...</p>
+          <div className="space-y-4 py-8 flex flex-col items-center justify-center animate-pulse">
+            <Loader2 className="h-7 w-7 animate-spin text-zinc-400" />
+            <p className="text-xs text-zinc-500 font-semibold">Verifying email authenticity...</p>
           </div>
         ) : success ? (
-          <div className="space-y-4 py-4 animate-scale-in">
-            <div className="mx-auto h-11 w-11 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
-              <CheckCircle2 className="h-5 w-5" />
+          <div className="space-y-4 py-4 text-center animate-scale-in">
+            <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
+              <span className="text-xl">✓</span>
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-xs font-bold text-foreground">Email Verified Successfully</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <h3 className="text-sm font-bold text-zinc-900">Email Verified Successfully</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
                 Your account is now activated. You can sign in using your email and password.
               </p>
             </div>
             <Link
               to="/login"
-              className="inline-flex w-full items-center justify-center rounded-lg bg-primary py-2 px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-neutral-800 transition-all space-x-1.5"
+              className="flex w-full items-center justify-center rounded-xl bg-zinc-900 py-2.5 px-4 text-xs font-bold text-white hover:bg-zinc-800 shadow-sm transition-all space-x-1.5"
             >
               <span>Continue to Login</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         ) : (
-          <div className="space-y-4 py-4 animate-scale-in">
-            <div className="mx-auto h-11 w-11 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive">
-              <XCircle className="h-5 w-5" />
+          <div className="space-y-4 py-4 text-center animate-scale-in">
+            <div className="mx-auto h-12 w-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-600">
+              <span className="text-xl">✕</span>
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-xs font-bold text-destructive">Verification Failed</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <h3 className="text-sm font-bold text-red-600">Verification Failed</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
                 {error}
               </p>
             </div>
-            <div className="pt-2">
-              <Link to="/login" className="text-xs font-semibold text-primary hover:underline">
-                Back to Login
-              </Link>
-            </div>
+            <Link
+              to="/login"
+              className="flex w-full items-center justify-center rounded-xl bg-zinc-900 py-2.5 px-4 text-xs font-bold text-white hover:bg-zinc-800 shadow-sm transition-all space-x-1.5"
+            >
+              <span>Back to Login</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         )}
-
       </div>
-    </div>
+    </>
   );
 };
 

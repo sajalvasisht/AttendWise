@@ -7,6 +7,8 @@ class SubjectBase(BaseModel):
     faculty: Optional[str] = None
     min_attendance_percent: float = Field(default=75.0, ge=0.0, le=100.0)
     units_per_class: int = Field(default=1, ge=1)
+    units_earned_per_class: int = Field(default=1, ge=1)
+    units_lost_per_class: int = Field(default=1, ge=1)
 
 class SubjectCreate(SubjectBase):
     pass
@@ -17,6 +19,8 @@ class SubjectUpdate(BaseModel):
     faculty: Optional[str] = None
     min_attendance_percent: Optional[float] = Field(default=None, ge=0.0, le=100.0)
     units_per_class: Optional[int] = Field(default=None, ge=1)
+    units_earned_per_class: Optional[int] = Field(default=None, ge=1)
+    units_lost_per_class: Optional[int] = Field(default=None, ge=1)
 
 class SubjectResponse(SubjectBase):
     id: int

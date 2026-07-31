@@ -38,7 +38,7 @@ const SetupComplete: React.FC = () => {
 
         {/* Explanation text */}
         <p className="text-xs leading-relaxed text-muted-foreground bg-muted/40 p-4 border border-border rounded-xl">
-          Next, you will initialize your current class attendance status. Entering conducted and attended counts up to today activates safe bunk simulations and dashboard indicators.
+          Next, you will initialize your current class attendance status. Entering conducted and attended counts up to today activates attendance margin calculations and dashboard indicators.
         </p>
 
         {/* Primary Action Button */}

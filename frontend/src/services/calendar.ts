@@ -20,8 +20,8 @@ export const calendarService = {
     return response.data;
   },
 
-  async save(semesterId: number, events: Omit<CalendarEvent, "id" | "semester_id">[]): Promise<CalendarEvent[]> {
-    const response = await api.post(`/semesters/${semesterId}/calendar`, events);
+  async save(semesterId: number, events: Omit<CalendarEvent, "id" | "semester_id">[], mode: "replace" | "merge" = "replace"): Promise<CalendarEvent[]> {
+    const response = await api.post(`/semesters/${semesterId}/calendar?mode=${mode}`, events);
     return response.data;
   },
 };

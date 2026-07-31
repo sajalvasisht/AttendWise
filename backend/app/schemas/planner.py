@@ -18,6 +18,8 @@ class SubjectProjection(BaseModel):
     recovery_required: bool
     required_to_attend: int
     units_per_class: int = 1
+    units_earned_per_class: int = 1
+    units_lost_per_class: int = 1
 
 class OverallProjection(BaseModel):
     current_percent: float

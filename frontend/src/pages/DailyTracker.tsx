@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { semesterService } from "../services/semester";
 import type { Semester } from "../services/semester";
 import { attendanceService } from "../services/attendance";
-import type { LectureOccurrence } from "../services/attendance";
+import type { LectureOccurrence, SubjectAttendanceStats } from "../services/attendance";
 import { calendarService } from "../services/calendar";
 import type { CalendarEvent } from "../services/calendar";
 import { 
@@ -25,6 +25,7 @@ const DailyTracker: React.FC = () => {
   
   const [occurrences, setOccurrences] = useState<LectureOccurrence[]>([]);
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
+  const [subjectStats, setSubjectStats] = useState<SubjectAttendanceStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,8 +58,11 @@ const DailyTracker: React.FC = () => {
       try {
         const evs = await calendarService.list(semester.id);
         setAllEvents(evs);
+        
+        const stats = await attendanceService.getSubjectsAttendance(semester.id);
+        setSubjectStats(stats);
       } catch (err) {
-        console.error("Failed to load calendar exceptions", err);
+        console.error("Failed to load calendar exceptions and stats", err);
       }
     };
     fetchEvents();
@@ -126,6 +130,9 @@ const DailyTracker: React.FC = () => {
       setMonthOccurrences(prev =>
         prev.map(occ => occ.id === occurrenceId ? { ...occ, attendance_status: updated.attendance_status } : occ)
       );
+      // Re-fetch subjects statistics to update percentage impact in real-time
+      const stats = await attendanceService.getSubjectsAttendance(semester.id);
+      setSubjectStats(stats);
     } catch (err) {
       console.error("Failed to update status", err);
       setError("Failed to update attendance status. Try again.");
@@ -177,6 +184,35 @@ const DailyTracker: React.FC = () => {
 
   const adjustMonth = (offset: number) => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1));
+  };
+
+  const getImpactPercent = (occ: LectureOccurrence, targetStatus: "present" | "absent" | "cancelled" | "unmarked") => {
+    const stats = subjectStats.find(s => s.subject_id === occ.subject_id);
+    if (!stats) return null;
+
+    const earned = stats.units_earned_per_class || 1;
+    const lost = stats.units_lost_per_class || 1;
+    
+    let presentCount = stats.attended;
+    let absentCount = stats.absent;
+
+    if (occ.attendance_status === "present") {
+      presentCount = Math.max(0, presentCount - 1);
+    } else if (occ.attendance_status === "absent") {
+      absentCount = Math.max(0, absentCount - 1);
+    }
+
+    if (targetStatus === "present") {
+      presentCount += 1;
+    } else if (targetStatus === "absent") {
+      absentCount += 1;
+    }
+
+    const attendedUnits = presentCount * earned;
+    const conductedUnits = (presentCount * earned) + (absentCount * lost);
+
+    if (conductedUnits === 0) return 100.0;
+    return Math.round((attendedUnits / conductedUnits) * 10000) / 100;
   };
 
   const handleDayClick = (dateStr: string) => {
@@ -490,24 +526,38 @@ const DailyTracker: React.FC = () => {
                             </div>
 
                             {/* Status controls */}
-                            <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/40">
-                              {["present", "absent", "cancelled"].map((status) => (
-                                <button
-                                  key={status}
-                                  onClick={() => handleStatusChange(occ.id, occ.attendance_status === status ? "unmarked" : (status as any))}
-                                  className={`text-[9px] font-bold py-1.5 px-3 rounded-lg border transition-all cursor-pointer uppercase tracking-wider ${
-                                    occ.attendance_status === status
-                                      ? status === "present"
-                                        ? "bg-primary text-primary-foreground border-primary"
-                                        : status === "absent"
-                                          ? "bg-destructive text-destructive-foreground border-destructive"
-                                          : "bg-amber-500 text-white border-amber-500"
-                                      : "bg-background border-border hover:bg-muted text-muted-foreground hover:text-foreground"
-                                  }`}
-                                >
-                                  {status}
-                                </button>
-                              ))}
+                            <div className="space-y-2 pt-2.5 border-t border-border/40">
+                              <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold">
+                                <span className="text-emerald-600 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">
+                                  +{occ.subject.units_earned_per_class || 1} units on Present
+                                </span>
+                                <span className="text-destructive bg-destructive/5 px-1.5 py-0.5 rounded border border-destructive/10">
+                                  -{occ.subject.units_lost_per_class || 1} units on Absent
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {["present", "absent", "cancelled"].map((status) => {
+                                  const projPercent = getImpactPercent(occ, status as any);
+                                  const isCurrent = occ.attendance_status === status;
+                                  return (
+                                    <button
+                                      key={status}
+                                      onClick={() => handleStatusChange(occ.id, isCurrent ? "unmarked" : (status as any))}
+                                      className={`text-[9px] font-bold py-1.5 px-3 rounded-lg border transition-all cursor-pointer uppercase tracking-wider ${
+                                        isCurrent
+                                          ? status === "present"
+                                            ? "bg-emerald-600 text-white border-emerald-600"
+                                            : status === "absent"
+                                              ? "bg-destructive text-white border-destructive"
+                                              : "bg-amber-500 text-white border-amber-500"
+                                          : "bg-background border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                                      }`}
+                                    >
+                                      {status} {projPercent !== null ? `(→ ${projPercent}%)` : ""}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         );

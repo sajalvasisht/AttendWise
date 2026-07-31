@@ -15,7 +15,7 @@ const AIAssistant: React.FC = () => {
     {
       id: "welcome",
       sender: "assistant",
-      text: "Hello! I am your AttendWise Leave Assistant. Ask me anything about your attendance schedule, safe bunk budgets, or simulate future leaves.",
+      text: "Hello! I am your AttendWise Leave Assistant. Ask me anything about your attendance schedule, attendance margins, or simulate future leaves.",
       timestamp: new Date()
     }
   ]);
@@ -72,8 +72,8 @@ const AIAssistant: React.FC = () => {
   };
 
   const suggestions = [
-    "Can I skip tomorrow's classes?",
-    "How many lectures can I still miss?",
+    "Can I miss tomorrow's classes?",
+    "How many lectures can I safely miss?",
     "When is the safest day to take leave?",
     "Show my attendance summary"
   ];
@@ -94,7 +94,7 @@ const AIAssistant: React.FC = () => {
               <h2 className="text-sm font-semibold tracking-tight text-foreground">Leave Planner Assistant</h2>
               <p className="text-[10px] text-muted-foreground flex items-center">
                 <Clock className="h-3 w-3 mr-1" />
-                Deterministic planning & absence simulations
+                Academic planning & absence simulations
               </p>
             </div>
           </div>
@@ -118,7 +118,7 @@ const AIAssistant: React.FC = () => {
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-foreground">Start chatting with the AI Assistant</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Query your attendance standing, predict safe bunks, or simulate planned leaves in natural language.
+                  Query your attendance standing, check margins, or simulate planned leaves in natural language.
                 </p>
               </div>
 
@@ -191,7 +191,7 @@ const AIAssistant: React.FC = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={loading}
-              placeholder="Ask a question about bunk budgets or leaves..."
+              placeholder="Ask a question about attendance margins or leaves..."
               className="flex-1 rounded-xl border border-border bg-card py-2.5 px-4 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/25 focus:ring-1 focus:ring-foreground/5 disabled:opacity-60"
             />
             <button

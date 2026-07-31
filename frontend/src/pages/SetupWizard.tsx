@@ -71,6 +71,9 @@ const SetupWizard: React.FC = () => {
   const [examStartTime, setExamStartTime] = useState("10:00");
   const [examEndTime, setExamEndTime] = useState("12:00");
 
+  const [pendingEvents, setPendingEvents] = useState<any[]>([]);
+  const [showCalendarMergeConfirm, setShowCalendarMergeConfirm] = useState(false);
+
   // Load active semester if one already exists
   useEffect(() => {
     const checkExistingSemester = async () => {
@@ -196,7 +199,12 @@ const SetupWizard: React.FC = () => {
         };
       });
 
-      setCalendarEvents(prev => [...prev, ...mappedEvents]);
+      if (calendarEvents.length > 0) {
+        setPendingEvents(mappedEvents);
+        setShowCalendarMergeConfirm(true);
+      } else {
+        setCalendarEvents(mappedEvents);
+      }
     } catch (err: any) {
       console.error("AI Calendar upload failed", err);
       setError(
@@ -1377,6 +1385,49 @@ const SetupWizard: React.FC = () => {
         )}
 
       </main>
+
+      {/* CONFIRM MERGE OR REPLACE CALENDAR EVENTS DIALOG */}
+      {showCalendarMergeConfirm && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="max-w-md w-full border border-border bg-card rounded-xl p-6 shadow-lg space-y-4 animate-scale-in">
+            <h3 className="text-sm font-bold text-foreground">Import Calendar Exceptions?</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              We found {pendingEvents.length} calendar exceptions. Choose how you want to apply these:
+            </p>
+            <div className="flex flex-col space-y-2">
+              <button
+                onClick={() => {
+                  setCalendarEvents(pendingEvents);
+                  setPendingEvents([]);
+                  setShowCalendarMergeConfirm(false);
+                }}
+                className="w-full rounded-lg bg-zinc-950 py-2 px-3 text-xs font-bold text-white hover:bg-zinc-800 transition-all cursor-pointer text-center"
+              >
+                Replace Everything (Discard current list)
+              </button>
+              <button
+                onClick={() => {
+                  setCalendarEvents(prev => [...prev, ...pendingEvents]);
+                  setPendingEvents([]);
+                  setShowCalendarMergeConfirm(false);
+                }}
+                className="w-full rounded-lg border border-border bg-card py-2 px-3 text-xs font-bold text-foreground hover:bg-muted transition-all cursor-pointer text-center"
+              >
+                Merge (Add new exceptions to current list)
+              </button>
+              <button
+                onClick={() => {
+                  setPendingEvents([]);
+                  setShowCalendarMergeConfirm(false);
+                }}
+                className="w-full rounded-lg border border-border bg-transparent py-2 px-3 text-xs font-semibold text-muted-foreground hover:bg-muted/10 transition-all cursor-pointer text-center"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

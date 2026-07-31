@@ -99,8 +99,8 @@ def update_semester(
     db.commit()
     db.refresh(semester)
     
-    # Regenerate future occurrences in case dates changed
-    generate_occurrences(db, semester_id, start_from_date=date.today())
+    # Regenerate occurrences in case dates changed
+    generate_occurrences(db, semester_id, start_from_date=semester.start_date)
     
     return semester
 

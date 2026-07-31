@@ -29,7 +29,7 @@ export const OnboardingTour: React.FC = () => {
     {
       targetSelector: 'a[href="/summary"]',
       title: "Attendance Summary",
-      description: "Analyze individual subject statistics, check how many 'safe bunks' you have left, and configure minimum attendance targets.",
+      description: "Analyze individual subject statistics, check your remaining attendance margins, and configure minimum attendance targets.",
       position: "bottom"
     },
     {
@@ -41,7 +41,7 @@ export const OnboardingTour: React.FC = () => {
     {
       targetSelector: 'a[href="/assistant"]',
       title: "AI Leave Assistant",
-      description: "Ask scheduling and leave questions in natural language. Plan bunks and analyze attendance using interactive Gemini-powered logic.",
+      description: "Ask scheduling and leave questions in natural language. Formulate attendance margins and analyze statistics using interactive Gemini-powered logic.",
       position: "bottom"
     },
     {

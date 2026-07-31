@@ -128,7 +128,7 @@ class SimulateLeavesHandler(BaseIntentHandler):
     def format_context(self, dto: SimulationResultDTO) -> str:
         return (
             f"Simulation results: Overall drops from {dto.overall_current_percent}% to {dto.overall_projected_percent}%. "
-            f"Overall safe bunks drop from {dto.overall_current_safe_bunks} to {dto.overall_projected_safe_bunks}. "
+            f"Overall safe absences drop from {dto.overall_current_safe_bunks} to {dto.overall_projected_safe_bunks}. "
             f"Warnings: {dto.warnings}. Missed classes: {dto.missed_lectures}."
         )
 
@@ -187,8 +187,8 @@ class SafeBunksCheckHandler(BaseIntentHandler):
         )
 
     def format_context(self, dto: SummaryResultDTO) -> str:
-        subjects_str = ", ".join(f"{s.name} ({s.code or 'No code'}): {s.safe_bunks} safe bunks left (Attendance: {s.attendance_percent}%, Min required: {s.min_attendance_percent}%)" for s in dto.subjects)
-        return f"Overall safe bunks budget: {dto.overall_safe_bunks}. Subjects: {subjects_str}."
+        subjects_str = ", ".join(f"{s.name} ({s.code or 'No code'}): {s.safe_bunks} safe absences left (Attendance: {s.attendance_percent}%, Min required: {s.min_attendance_percent}%)" for s in dto.subjects)
+        return f"Overall safe absences budget: {dto.overall_safe_bunks}. Subjects: {subjects_str}."
 
 @register_intent("attendance_summary")
 class AttendanceSummaryHandler(BaseIntentHandler):
@@ -213,8 +213,8 @@ class AttendanceSummaryHandler(BaseIntentHandler):
         )
 
     def format_context(self, dto: SummaryResultDTO) -> str:
-        subjects_str = ", ".join(f"{s.name}: {s.attendance_percent}% (Safe bunks: {s.safe_bunks}, Required to attend: {s.required_to_attend})" for s in dto.subjects)
-        return f"Overall Attendance: {dto.overall_percent}%, Overall Safe Bunks: {dto.overall_safe_bunks}. Subjects: {subjects_str}."
+        subjects_str = ", ".join(f"{s.name}: {s.attendance_percent}% (Safe absences: {s.safe_bunks}, Required to attend: {s.required_to_attend})" for s in dto.subjects)
+        return f"Overall Attendance: {dto.overall_percent}%, Overall Safe Absences: {dto.overall_safe_bunks}. Subjects: {subjects_str}."
 
 def fallback_intent_parser(message: str, current_date: date) -> IntentExtraction:
     msg = message.lower()
@@ -268,7 +268,7 @@ def fallback_intent_parser(message: str, current_date: date) -> IntentExtraction
 
 def fallback_response_generator(intent: str, context_info: str) -> str:
     if intent == "unknown":
-        return "I can help you simulate future absences, check remaining safe leaves/bunks, suggest safest leave windows, or display your overall attendance summary. Please ask something related to your academic schedule."
+        return "I can help you simulate future absences, check remaining safe leaves, suggest safest leave windows, or display your overall attendance summary. Please ask something related to your academic schedule."
     return f"Here is what I calculated from the planning engine: {context_info}"
 
 def extract_intent_via_gemini(message: str, current_date: date) -> IntentExtraction:
@@ -313,11 +313,13 @@ def generate_user_reply(message: str, intent: str, context_info: str) -> str:
             ],
             config=types.GenerateContentConfig(
                 system_instruction=(
-                    "You are the AttendWise AI Leave Assistant. "
+                    "You are the AttendWise AI Academic Leave Assistant. "
                     "Formulate a friendly, concise, and highly actionable response to the user's question. "
                     "Explain the results using the structured planner engine calculations provided in the context. "
                     "Do NOT perform any attendance calculations or percentage math on your own. "
-                    "Rely 100% on the figures provided in the context. Keep your response under 3 sentences."
+                    "Rely 100% on the figures provided in the context. Keep your response under 3 sentences. "
+                    "Avoid informal student slang such as 'bunk', 'bunk budget', or 'bunk safely'. "
+                    "Instead, use professional academic terms like 'attendance margin', 'absence allowance', 'safe leaves', and 'plan absences confidently'."
                 )
             )
         )

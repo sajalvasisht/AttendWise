@@ -15,8 +15,8 @@ export const timetableService = {
     return response.data;
   },
 
-  async save(semesterId: number, slots: Omit<TimetableSlot, "id" | "semester_id">[]): Promise<TimetableSlot[]> {
-    const response = await api.post(`/semesters/${semesterId}/timetable`, slots);
+  async save(semesterId: number, slots: Omit<TimetableSlot, "id" | "semester_id">[], mode: "replace" | "merge" = "replace"): Promise<TimetableSlot[]> {
+    const response = await api.post(`/semesters/${semesterId}/timetable?mode=${mode}`, slots);
     return response.data;
   },
 };

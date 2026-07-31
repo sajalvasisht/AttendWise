@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { authService } from "../services/auth";
-import { Loader2, KeyRound, CheckCircle2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -40,100 +40,103 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased flex flex-col items-center justify-center p-6 font-sans">
-      <div className="max-w-md w-full border border-border bg-card rounded-xl p-8 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-6">
-        
-        {/* Header */}
-        <div className="space-y-1 text-center">
-          <h2 className="text-sm font-semibold tracking-tight text-muted-foreground uppercase">AttendWise</h2>
-          <h1 className="text-xl font-bold tracking-tight">Reset Password</h1>
-          <p className="text-xs text-muted-foreground">
-            Enter your new secure password below to activate your account access.
-          </p>
-        </div>
+    <>
+      {/* Typographic Header */}
+      <div className="space-y-2.5">
+        <h2 className="text-2xl font-bold tracking-tight text-zinc-900 font-sans">Reset password</h2>
+        <p className="text-xs text-zinc-400 font-medium">Create a new secure password for your account.</p>
+      </div>
 
+      <div className="space-y-6">
         {success ? (
           <div className="space-y-4 py-4 text-center animate-scale-in">
-            <div className="mx-auto h-11 w-11 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
-              <CheckCircle2 className="h-5 w-5" />
+            <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
+              <span className="text-xl">✓</span>
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-xs font-bold text-foreground">Password Reset Successfully</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <h3 className="text-sm font-bold text-zinc-900">Password Reset Successfully</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
                 Your credentials have been updated. You can now login with your new password.
               </p>
             </div>
             <Link
               to="/login"
-              className="inline-flex w-full items-center justify-center rounded-lg bg-primary py-2 px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-neutral-800 transition-all space-x-1.5"
+              className="flex w-full items-center justify-center rounded-xl bg-zinc-900 py-2.5 px-4 text-xs font-bold text-white hover:bg-zinc-800 shadow-sm transition-all space-x-1.5"
             >
               <span>Go to Login</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="rounded-xl border border-destructive/15 bg-destructive/5 p-3 text-xs text-destructive">
-                <span>{error}</span>
+              <div className="rounded-xl border border-red-500/10 bg-red-950/5 p-4 text-xs text-red-500 leading-relaxed font-semibold animate-scale-in">
+                {error}
               </div>
             )}
 
             {/* New Password */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <label htmlFor="newPassword" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
                 New Password
               </label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground/60" />
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-xs text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5 transition-all"
-                />
-              </div>
+              <input
+                id="newPassword"
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={loading}
+                className="block w-full rounded-xl border border-zinc-200 bg-white py-2.5 px-3.5 text-xs text-zinc-800 placeholder:text-zinc-400 outline-none transition-all focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 disabled:opacity-50"
+                placeholder="••••••••"
+              />
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Confirm New Password
+              <label htmlFor="confirmPassword" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+                Confirm Password
               </label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground/60" />
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-xs text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5 transition-all"
-                />
-              </div>
+              <input
+                id="confirmPassword"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                className="block w-full rounded-xl border border-zinc-200 bg-white py-2.5 px-3.5 text-xs text-zinc-800 placeholder:text-zinc-400 outline-none transition-all focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 disabled:opacity-50"
+                placeholder="••••••••"
+              />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-primary py-2.5 px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-foreground/25 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center space-x-2"
+              className="flex w-full items-center justify-center rounded-xl bg-zinc-900 py-2.5 px-4 text-xs font-bold text-white hover:bg-zinc-800 shadow-sm transition-all focus:outline-none disabled:opacity-50 cursor-pointer active:scale-[0.98] duration-150 h-10"
             >
               {loading ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Saving credentials...</span>
-                </>
+                <Loader2 className="h-4 w-4 animate-spin text-white/60" />
               ) : (
-                <span>Change Password</span>
+                <span className="flex items-center space-x-1.5">
+                  <span>Change Password</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
               )}
             </button>
           </form>
         )}
 
+        {/* Switcher Footer */}
+        <div className="text-center pt-4 border-t border-zinc-150/40">
+          <p className="text-xs text-zinc-500 font-medium">
+            Remember password?{" "}
+            <Link to="/login" className="font-bold text-emerald-600 hover:underline transition-all">
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

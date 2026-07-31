@@ -41,6 +41,8 @@ export interface SubjectAttendanceStats {
   required_to_attend: number;
   is_initialized: boolean;
   units_per_class: number;
+  units_earned_per_class: number;
+  units_lost_per_class: number;
 }
 
 export interface UpcomingDaySchedule {

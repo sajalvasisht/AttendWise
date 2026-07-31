@@ -17,8 +17,10 @@ import ResetPassword from "./pages/ResetPassword";
 import Settings from "./pages/Settings";
 import Welcome from "./pages/Welcome";
 import SetupComplete from "./pages/SetupComplete";
+import ManageSetup from "./pages/ManageSetup";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { OnboardingTour } from "./components/OnboardingTour";
+import AuthLayout from "./components/AuthLayout";
 
 const App: React.FC = () => {
   return (
@@ -27,11 +29,13 @@ const App: React.FC = () => {
       <BrowserRouter>
         <OnboardingTour />
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+          </Route>
           <Route
             path="/welcome"
             element={
@@ -53,6 +57,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-setup"
+            element={
+              <ProtectedRoute>
+                <ManageSetup />
               </ProtectedRoute>
             }
           />

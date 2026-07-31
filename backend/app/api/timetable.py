@@ -25,32 +25,44 @@ def read_timetable_slots(
 def save_timetable_slots(
     semester_id: int,
     slots_in: List[TimetableSlotCreate],
+    mode: str = "replace",  # "replace" or "merge"
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     verify_active_semester(semester_id, current_user.id, db)
 
-    # Delete existing slots for the semester to refresh
-    db.query(TimetableSlot).filter(TimetableSlot.semester_id == semester_id).delete()
+    if mode == "replace":
+        db.query(TimetableSlot).filter(TimetableSlot.semester_id == semester_id).delete()
+        existing_slots = set()
+    else:
+        existing_list = db.query(TimetableSlot).filter(TimetableSlot.semester_id == semester_id).all()
+        existing_slots = {(s.subject_id, s.day_of_week, s.start_time, s.end_time) for s in existing_list}
 
-    new_slots = [
-        TimetableSlot(
-            semester_id=semester_id,
-            subject_id=slot.subject_id,
-            day_of_week=slot.day_of_week,
-            start_time=slot.start_time,
-            end_time=slot.end_time
-        )
-        for slot in slots_in
-    ]
+    new_slots = []
+    for slot in slots_in:
+        key = (slot.subject_id, slot.day_of_week, slot.start_time, slot.end_time)
+        if key not in existing_slots:
+            new_slots.append(
+                TimetableSlot(
+                    semester_id=semester_id,
+                    subject_id=slot.subject_id,
+                    day_of_week=slot.day_of_week,
+                    start_time=slot.start_time,
+                    end_time=slot.end_time
+                )
+            )
+            if mode == "merge":
+                existing_slots.add(key)
 
     if new_slots:
         db.add_all(new_slots)
         
     db.commit()
 
-    # Regenerate future occurrences based on updated timetable
-    generate_occurrences(db, semester_id, start_from_date=date.today())
+    # Regenerate occurrences based on updated timetable starting from semester start
+    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+    if semester:
+        generate_occurrences(db, semester_id, start_from_date=semester.start_date)
 
     # Fetch and return the newly saved slots
     return db.query(TimetableSlot).filter(TimetableSlot.semester_id == semester_id).all()

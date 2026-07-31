@@ -1,12 +1,18 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, ChevronRight, ChevronLeft, Sparkles, Calendar, Compass, CheckSquare } from "lucide-react";
+import { GraduationCap, ChevronRight, ChevronLeft, Calendar, Compass, BarChart3, Bot } from "lucide-react";
 
 interface IntroSlide {
   title: string;
+  tagline: string;
   description: string;
   icon: React.ComponentType<any>;
-  details: string[];
+  badgeText: string;
+  featureCard: {
+    title: string;
+    description: string;
+    details: string[];
+  };
 }
 
 const Welcome: React.FC = () => {
@@ -16,53 +22,83 @@ const Welcome: React.FC = () => {
   const slides: IntroSlide[] = [
     {
       title: "Welcome to AttendWise",
-      description: "Plan your attendance terms smarter. Let's walk through the core planning tools before configuring your active semester timeline.",
+      tagline: "Track your attendance, plan leaves, and stay above target requirements.",
+      description: "AttendWise helps you coordinate weekly schedules, calculate safe absences, and simulate leave dates without manual calculations.",
       icon: GraduationCap,
-      details: [
-        "Track term metrics, safe bunk budgets, and target thresholds.",
-        "Auto-generate calendar occurrences based on weekly timetables.",
-        "Interactive leave assistant powered by Gemini AI."
-      ]
+      badgeText: "Overview",
+      featureCard: {
+        title: "Intelligent Class Tracker",
+        description: "Everything you need to stay on track is centralized in a simple dashboard.",
+        details: [
+          "Real-time attendance percentage tracking across all courses.",
+          "Automatic calendar exception checks (holidays, exams, and leaves).",
+          "Clean visual indicators showing if your standing is safe or warning-level."
+        ]
+      }
     },
     {
-      title: "What AttendWise Helps You Do",
-      description: "Manage your courses, plan absences, and prevent attendance drops without manual spreadsheet logging.",
-      icon: CheckSquare,
-      details: [
-        "Monitor overall and subject-specific attendance percentages.",
-        "Identify courses nearing or dropping below critical requirements.",
-        "Track exact counts of conducted, attended, and cancelled lectures."
-      ]
+      title: "Attendance Margins",
+      tagline: "Know exactly how many classes you can safely miss.",
+      description: "Monitor overall and course-specific attendance averages and targets automatically. Get rid of spreadsheet calculations.",
+      icon: BarChart3,
+      badgeText: "Margins",
+      featureCard: {
+        title: "Absence Forecasts",
+        description: "Understand exactly where you stand and what targets you must achieve next.",
+        details: [
+          "Check course standings: see how many classes you can safely miss.",
+          "Get recovery guides: know exactly how many consecutive lectures to attend.",
+          "Track detailed statistics: conducted, attended, and cancelled class totals."
+        ]
+      }
     },
     {
-      title: "How Attendance Tracking Works",
-      description: "Logging conduct is extremely straightforward. Seed your historical records with a few simple clicks.",
-      icon: Calendar,
-      details: [
-        "Log conducted classes daily using today's schedule checklist.",
-        "Mark lectures as Present, Absent, or Cancelled.",
-        "Access historical occurrences inside our fully featured monthly calendar."
-      ]
-    },
-    {
-      title: "Deterministic Absences simulation",
-      description: "Our planner projects stats before you skip a class, verifying exactly how absences affect your future standing.",
+      title: "Smart Leave Planning",
+      tagline: "Simulate leave dates and check target updates.",
+      description: "Model absences before you take them to verify if you will remain above target requirements.",
       icon: Compass,
-      details: [
-        "Select future leave dates on the interactive timeline.",
-        "Compare current percentages against simulated projections.",
-        "View warning alerts before making decision bunks."
-      ]
+      badgeText: "Simulation",
+      featureCard: {
+        title: "Absence Projections",
+        description: "Map leave dates and immediately see the projected impact on your courses.",
+        details: [
+          "Select start and end dates to run leave planning projections.",
+          "Compare pre-simulation standing with future simulated standings.",
+          "Receive alerts if a planned absence drops you below target thresholds."
+        ]
+      }
     },
     {
-      title: "How the AI Leave Assistant Helps",
-      description: "Consult the built-in AI Assistant in natural language. It queries active semester timelines deterministically.",
-      icon: Sparkles,
-      details: [
-        "Ask queries like: 'Can I bunk science tomorrow?' or 'Suggest leaves next week.'",
-        "Interact with persistent, date-grouped chat records.",
-        "Review clean, explainable forecast outputs generated by the planner engine."
-      ]
+      title: "Timetable Upload",
+      tagline: "Extract schedules from academic documents.",
+      description: "Upload your class timetable PDF or image. We generate your semester calendar schedule automatically.",
+      icon: Calendar,
+      badgeText: "Automation",
+      featureCard: {
+        title: "Intelligent Timetable Parser",
+        description: "Skip manual entry and configure your entire semester calendar in one click.",
+        details: [
+          "Automatic extraction of recurring weekly timetable slots.",
+          "Deduction of academic calendar holidays and exam blocks.",
+          "Instant seeding of the monthly schedule tracker grid."
+        ]
+      }
+    },
+    {
+      title: "AI Academic Assistant",
+      tagline: "Ask schedule questions in plain English.",
+      description: "Consult the AI assistant to forecast leaves or check dates using natural conversation.",
+      icon: Bot,
+      badgeText: "AI Assistant",
+      featureCard: {
+        title: "Conversational Insights",
+        description: "Ask questions naturally and get explainable planner calculations in return.",
+        details: [
+          "Ask queries like: 'Can I miss science tomorrow?' or 'Suggest leaves next week.'",
+          "Access persistent, date-grouped conversation records.",
+          "Get clean, human-friendly responses backed by actual database logic."
+        ]
+      }
     }
   ];
 
@@ -89,73 +125,57 @@ const Welcome: React.FC = () => {
   const IconComponent = activeSlide.icon;
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col justify-center items-center px-6 py-12">
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col justify-center items-center px-6 py-12 relative overflow-hidden">
       
-      {/* Background radial highlight */}
-      <div className="absolute top-1/4 h-72 w-72 rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+      {/* Decorative Blur Orbs */}
+      <div className="absolute top-1/4 left-1/4 h-80 w-80 rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 h-85 w-85 rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
 
-      {/* Main card */}
-      <div className="max-w-md w-full border border-border bg-card rounded-2xl p-6 sm:p-8 shadow-xl space-y-6 relative overflow-hidden animate-scale-in">
+      {/* Outer Wrapper */}
+      <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center z-10">
         
-        {/* Top Progress Indicators */}
-        <div className="flex items-center justify-between border-b border-border/60 pb-4">
-          <div className="flex items-center space-x-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background shadow-sm">
-              <GraduationCap className="h-4 w-4 text-foreground" />
-            </div>
-            <span className="text-xs font-bold tracking-tight text-foreground">Guide Tour</span>
+        {/* Left Side: Copy & Narrative (7 cols) */}
+        <div className="md:col-span-7 space-y-6">
+          <div className="flex items-center space-x-2.5">
+            <span className="text-[9px] font-bold text-primary uppercase tracking-widest bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
+              {activeSlide.badgeText}
+            </span>
+            <span className="text-[10px] text-muted-foreground font-semibold">
+              Step {currentSlide + 1} of {slides.length}
+            </span>
           </div>
 
-          <span className="text-[10px] text-muted-foreground font-semibold">
-            Step {currentSlide + 1} of {slides.length}
-          </span>
-        </div>
-
-        {/* Slide Progress bar */}
-        <div className="w-full bg-muted h-1 rounded-full overflow-hidden">
-          <div 
-            className="bg-primary h-full transition-all duration-300"
-            style={{ width: `${((currentSlide + 1) / slides.length) * 100}%` }}
-          />
-        </div>
-
-        {/* Slide Content */}
-        <div className="space-y-5 py-2 animate-scale-in" key={currentSlide}>
-          <div className="flex items-center space-x-3">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary shrink-0">
-              <IconComponent className="h-5 w-5" />
-            </div>
-            <h2 className="text-base font-bold tracking-tight text-foreground">{activeSlide.title}</h2>
+          <div className="space-y-3.5">
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground leading-tight">
+              {activeSlide.title}
+            </h1>
+            <p className="text-sm font-semibold text-muted-foreground">
+              {activeSlide.tagline}
+            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground max-w-md">
+              {activeSlide.description}
+            </p>
           </div>
 
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {activeSlide.description}
-          </p>
-
-          <ul className="space-y-2.5 pt-2">
-            {activeSlide.details.map((detail, idx) => (
-              <li key={idx} className="flex items-start space-x-2 text-xs text-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 mt-1.5" />
-                <span className="leading-relaxed">{detail}</span>
-              </li>
+          {/* Indicators dots */}
+          <div className="flex items-center space-x-2 py-2">
+            {slides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentSlide(idx)}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  currentSlide === idx ? "w-6 bg-primary" : "w-1.5 bg-border hover:bg-muted-foreground/45"
+                }`}
+              />
             ))}
-          </ul>
-        </div>
+          </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-border/60">
-          <button
-            onClick={handleFinishOnboarding}
-            className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-          >
-            Skip Guide
-          </button>
-
-          <div className="flex items-center space-x-2">
+          {/* Actions */}
+          <div className="flex items-center space-x-4 pt-2">
             {currentSlide > 0 && (
               <button
                 onClick={handleBack}
-                className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                className="flex items-center justify-center h-9 w-9 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -163,12 +183,48 @@ const Welcome: React.FC = () => {
 
             <button
               onClick={handleNext}
-              className="rounded-lg bg-primary py-1.5 px-4 text-xs font-bold text-primary-foreground hover:bg-neutral-800 transition-all cursor-pointer flex items-center space-x-0.5"
+              className="rounded-xl bg-primary py-2.5 px-6 text-xs font-bold text-primary-foreground hover:bg-neutral-800 transition-all cursor-pointer flex items-center space-x-1.5 shadow-sm active:scale-[0.98]"
             >
-              <span>{currentSlide === slides.length - 1 ? "Finish" : "Next"}</span>
+              <span>{currentSlide === slides.length - 1 ? "Start Onboarding" : "Continue"}</span>
               <ChevronRight className="h-4 w-4" />
             </button>
+
+            <button
+              onClick={handleFinishOnboarding}
+              className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Skip Walkthrough
+            </button>
           </div>
+        </div>
+
+        {/* Right Side: Interactive Feature Showcase Card (5 cols) */}
+        <div className="md:col-span-5 bg-card border border-border rounded-2xl p-6 shadow-xl space-y-5 animate-scale-in relative overflow-hidden" key={currentSlide}>
+          {/* Decorative faint glow */}
+          <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
+
+          {/* Card Header */}
+          <div className="flex items-center space-x-3 pb-3 border-b border-border/60">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary shrink-0">
+              <IconComponent className="h-5 w-5" />
+            </div>
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">{activeSlide.featureCard.title}</h3>
+          </div>
+
+          {/* Card Description */}
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {activeSlide.featureCard.description}
+          </p>
+
+          {/* Details list */}
+          <ul className="space-y-3 pt-1">
+            {activeSlide.featureCard.details.map((detail, idx) => (
+              <li key={idx} className="flex items-start space-x-2.5 text-xs text-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 mt-1.5" />
+                <span className="leading-relaxed text-muted-foreground font-medium">{detail}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
       </div>

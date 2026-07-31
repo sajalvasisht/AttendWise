@@ -44,7 +44,9 @@ def create_subject(
         code=subject_in.code,
         faculty=subject_in.faculty,
         min_attendance_percent=subject_in.min_attendance_percent,
-        units_per_class=subject_in.units_per_class
+        units_per_class=subject_in.units_per_class,
+        units_earned_per_class=subject_in.units_earned_per_class,
+        units_lost_per_class=subject_in.units_lost_per_class
     )
     db.add(db_subject)
     db.commit()

@@ -43,7 +43,8 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onSucces
               type: "standard",
               shape: "rectangular",
               text: "continue_with",
-              width: buttonRef.current.clientWidth || 320,
+              width: 384,
+              height: 40,
             });
           }
           setLoading(false);
@@ -80,7 +81,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onSucces
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-2.5 text-xs text-muted-foreground w-full bg-card border border-border rounded-lg">
+      <div className="flex items-center justify-center h-10 text-xs text-muted-foreground w-full bg-card border border-border rounded-xl">
         <Loader2 className="h-4 w-4 animate-spin mr-2 text-muted-foreground/60" /> 
         <span>Loading Google Authentication...</span>
       </div>
@@ -93,7 +94,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onSucces
         <button
           type="button"
           disabled
-          className="w-full rounded-lg border border-border/80 bg-card/50 py-2.5 px-4 text-xs font-bold text-muted-foreground/60 flex items-center justify-center space-x-2.5 cursor-not-allowed"
+          className="w-full rounded-xl border border-border bg-card/50 h-10 text-xs font-bold text-muted-foreground/60 flex items-center justify-center space-x-2.5 cursor-not-allowed"
         >
           <svg className="h-4 w-4 shrink-0 opacity-40" viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor" />
@@ -104,11 +105,11 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onSucces
           <span>Google Sign-In Unavailable</span>
         </button>
 
-        <div className="rounded-lg border border-border/80 bg-muted/40 p-3 text-[10px] text-muted-foreground flex items-start space-x-2.5 leading-relaxed">
+        <div className="rounded-xl border border-border bg-muted/40 p-3.5 text-[10px] text-muted-foreground flex items-start space-x-2.5 leading-relaxed">
           <Info className="h-4 w-4 shrink-0 text-muted-foreground/80 mt-0.5" />
           <div>
             <span className="font-semibold text-foreground block">Developer configuration needed</span>
-            Google OAuth requires a valid Client ID. Set <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">VITE_GOOGLE_CLIENT_ID</code> in your frontend environment variables to enable it. Meanwhile, please sign in with an email account.
+            Google OAuth requires a valid Client ID. Set <code className="bg-muted px-1 py-0.5 rounded text-foreground font-mono">VITE_GOOGLE_CLIENT_ID</code> in your environment variables.
           </div>
         </div>
       </div>
@@ -116,7 +117,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onSucces
   }
 
   return (
-    <div className="w-full flex justify-center border border-border rounded-lg bg-card overflow-hidden hover:bg-muted py-0.5 shadow-sm">
+    <div className="w-full flex justify-center">
       <div ref={buttonRef} className="w-full" />
     </div>
   );

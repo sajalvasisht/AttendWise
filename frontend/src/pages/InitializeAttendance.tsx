@@ -129,7 +129,7 @@ const InitializeAttendance: React.FC = () => {
             <Info className="h-4.5 w-4.5 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold block mb-0.5">Why is this required?</span>
-              AttendWise needs your baseline stats to calculate safe bunks and consecutive classes. You will mark today's classes onwards using the Daily Tracker.
+              AttendWise needs your baseline stats to calculate attendance margins and consecutive classes. You will mark today's classes onwards using the Daily Tracker.
             </div>
           </div>
 
