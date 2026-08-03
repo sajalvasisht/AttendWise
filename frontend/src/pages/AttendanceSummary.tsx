@@ -44,78 +44,77 @@ const AttendanceSummary: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col font-sans">
-      
+    <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased selection:bg-emerald-100 selection:text-emerald-950 flex flex-col font-sans">
       <Navbar />
 
-      {/* Main Grid */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 space-y-10">
+      <main className="flex-grow max-w-5xl mx-auto w-full px-6 py-14 space-y-12">
         
         {/* Error State Banner */}
         {error && (
-          <div className="rounded-xl border border-destructive/15 bg-destructive/5 p-4 text-xs text-destructive flex items-start space-x-3">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span className="leading-relaxed">{error}</span>
+          <div className="rounded-2xl border border-red-500/15 bg-red-50/50 p-4 text-xs text-red-650 flex items-start space-x-3">
+            <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+            <span className="leading-relaxed font-semibold">{error}</span>
           </div>
         )}
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="flex flex-col justify-center items-center py-32 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+            <p className="text-xs text-zinc-400 font-semibold">Compiling stats...</p>
           </div>
         ) : (
           <>
             {/* OVERALL SUMMARY CARD */}
             {overall && (
-              <div className="border border-border bg-card rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] space-y-6">
-                <div className="flex items-center justify-between border-b border-border pb-4">
-                  <div className="space-y-1">
-                    <h2 className="text-lg font-semibold text-foreground tracking-tight">Semester Summary</h2>
-                    <p className="text-xs text-muted-foreground">Aggregated attendance percentages across all enrolled subjects.</p>
+              <div className="premium-card p-8 space-y-8">
+                <div className="flex items-center justify-between border-b border-zinc-100 pb-5">
+                  <div className="space-y-1.5">
+                    <h2 className="text-xl font-black text-zinc-900 tracking-tight">Semester Summary</h2>
+                    <p className="text-xs text-zinc-500 font-medium leading-relaxed max-w-md">Aggregated attendance percentages across all enrolled subjects.</p>
                   </div>
                   
                   {/* Huge Percentage indicator */}
                   <div className="text-right">
-                    <span className="text-3xl font-bold tracking-tight text-foreground">{overall.attendance_percent}%</span>
-                    <span className="block text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mt-0.5">Average</span>
+                    <span className="text-3xl font-black tracking-tight text-zinc-900 leading-none">{overall.attendance_percent}%</span>
+                    <span className="block text-[9px] text-zinc-400 uppercase font-bold tracking-widest mt-1">Average</span>
                   </div>
                 </div>
 
                 {/* Substats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-6 pt-2">
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground font-medium">Total Lectures</span>
-                    <span className="block text-lg font-semibold text-foreground">{overall.total_lectures}</span>
+                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Total Lectures</span>
+                    <span className="block text-xl font-bold text-zinc-800">{overall.total_lectures}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground font-medium">Conducted</span>
-                    <span className="block text-lg font-semibold text-foreground">{overall.conducted}</span>
+                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Conducted</span>
+                    <span className="block text-xl font-bold text-zinc-800">{overall.conducted}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground font-medium text-emerald-600">Present</span>
-                    <span className="block text-lg font-semibold text-emerald-600">{overall.attended}</span>
+                    <span className="text-[11px] text-emerald-600 font-semibold uppercase tracking-wider block">Present</span>
+                    <span className="block text-xl font-bold text-emerald-600">{overall.attended}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground font-medium text-destructive">Absent</span>
-                    <span className="block text-lg font-semibold text-destructive">{overall.absent}</span>
+                    <span className="text-[11px] text-red-600 font-semibold uppercase tracking-wider block">Absent</span>
+                    <span className="block text-xl font-bold text-red-650">{overall.absent}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground font-medium">Cancelled</span>
-                    <span className="block text-lg font-semibold text-foreground">{overall.cancelled}</span>
+                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Cancelled</span>
+                    <span className="block text-xl font-bold text-zinc-800">{overall.cancelled}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground font-medium">Unmarked</span>
-                    <span className="block text-lg font-semibold text-foreground">{overall.unmarked}</span>
+                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Unmarked</span>
+                    <span className="block text-xl font-bold text-zinc-800">{overall.unmarked}</span>
                   </div>
                 </div>
 
                 {/* Budget Banner */}
-                <div className="mt-4 border border-border bg-muted/30 rounded-lg p-4 flex items-center justify-between">
+                <div className="border border-zinc-200 bg-zinc-50/50 rounded-xl p-4.5 flex items-center justify-between">
                   <div className="flex items-center space-x-3 text-xs">
-                    <Calculator className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-muted-foreground">Remaining Safe Absences (Semester Overall)</span>
+                    <Calculator className="h-4.5 w-4.5 text-zinc-400" />
+                    <span className="font-semibold text-zinc-500">Remaining Safe Absences (Semester Overall)</span>
                   </div>
-                  <span className="text-sm font-bold text-foreground">
+                  <span className="text-sm font-extrabold text-zinc-800">
                     {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes
                   </span>
                 </div>
@@ -124,97 +123,108 @@ const AttendanceSummary: React.FC = () => {
 
             {/* SUBJECT-WISE CARDS */}
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+              <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                <h3 className="text-[10px] font-bold text-zinc-450 uppercase tracking-widest">
                   Course Breakdown
                 </h3>
               </div>
 
               {subjects.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-card p-10 text-center text-xs text-muted-foreground space-y-4 max-w-sm mx-auto shadow-sm animate-scale-in">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mx-auto">
+                <div className="premium-card p-10 text-center space-y-4 max-w-sm mx-auto shadow-sm animate-scale-in">
+                  <div className="h-10 w-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 mx-auto">
                     <BookOpen className="h-5 w-5" />
                   </div>
                   <div className="space-y-1.5">
-                    <h4 className="text-xs font-bold text-foreground">No Courses Tracked</h4>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    <h4 className="text-xs font-bold text-zinc-800">No Courses Tracked</h4>
+                    <p className="text-[11px] text-zinc-550 leading-relaxed">
                       You haven't defined any subjects for the current semester. Please run the setup wizard or initialize your attendance baseline to begin tracking.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {subjects.map((subj) => {
                     const isBelow = subj.attendance_percent < subj.min_attendance_percent;
-                    
+                    const isWarning = !isBelow && subj.safe_bunks === 0;
+
+                    let colorClass = "text-emerald-600";
+                    let barColor = "bg-emerald-500";
+                    if (isBelow) {
+                      colorClass = "text-red-650";
+                      barColor = "bg-red-500";
+                    } else if (isWarning) {
+                      colorClass = "text-amber-600";
+                      barColor = "bg-amber-500";
+                    }
+
                     return (
-                      <div key={subj.subject_id} className="border border-border bg-card rounded-xl p-6 shadow-[0_1px_2px_rgba(0,0,0,0.01)] space-y-4 hover:border-foreground/10 transition-colors">
+                      <div key={subj.subject_id} className="premium-card p-6 flex flex-col justify-between gap-5">
                         
                         {/* Title and Code */}
                         <div className="flex justify-between items-start">
                           <div className="space-y-1">
-                            <h4 className="text-sm font-semibold text-foreground leading-tight">{subj.name}</h4>
+                            <h4 className="text-sm font-bold text-zinc-850 leading-tight truncate max-w-[160px]">{subj.name}</h4>
                             {subj.code && (
-                              <span className="text-[9px] bg-muted border border-border/80 text-muted-foreground px-1.5 py-0.5 rounded uppercase font-semibold">
+                              <span className="text-[9px] bg-zinc-100 border border-zinc-200 text-zinc-500 px-1.5 py-0.5 rounded font-mono uppercase tracking-wide inline-block">
                                 {subj.code}
                               </span>
                             )}
                           </div>
                           
                           <div className="text-right">
-                            <span className={`text-base font-bold ${isBelow ? "text-destructive" : "text-foreground"}`}>
+                            <span className={`text-[18px] font-black leading-none block ${colorClass}`}>
                               {subj.attendance_percent}%
                             </span>
-                            <span className="block text-[9px] text-muted-foreground font-medium mt-0.5">
+                            <span className="block text-[9px] text-zinc-400 font-bold tracking-wide mt-1">
                               Goal: {subj.min_attendance_percent}%
                             </span>
                           </div>
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              isBelow ? "bg-destructive" : "bg-primary"
-                            }`}
-                            style={{ width: `${Math.min(100, subj.attendance_percent)}%` }}
-                          />
+                        <div className="space-y-1">
+                          <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                              style={{ width: `${Math.min(100, subj.attendance_percent)}%` }}
+                            />
+                          </div>
                         </div>
 
                         {/* Sub-counts */}
-                        <div className="grid grid-cols-4 gap-2 text-center text-[10px] text-muted-foreground py-1 bg-muted/10 rounded-lg border border-border/30">
+                        <div className="grid grid-cols-4 gap-2 text-center text-[10px] text-zinc-500 py-1.5 bg-zinc-50/50 rounded-xl border border-zinc-200/50">
                           <div>
-                            <span className="block font-semibold text-foreground">{subj.attended}</span>
+                            <span className="block font-bold text-zinc-800">{subj.attended}</span>
                             <span>Present</span>
                           </div>
                           <div>
-                            <span className="block font-semibold text-foreground">{subj.absent}</span>
+                            <span className="block font-bold text-zinc-800">{subj.absent}</span>
                             <span>Absent</span>
                           </div>
                           <div>
-                            <span className="block font-semibold text-foreground">{subj.cancelled}</span>
+                            <span className="block font-bold text-zinc-800">{subj.cancelled}</span>
                             <span>Cancelled</span>
                           </div>
                           <div>
-                            <span className="block font-semibold text-foreground">{subj.unmarked}</span>
+                            <span className="block font-bold text-zinc-800">{subj.unmarked}</span>
                             <span>Unmarked</span>
                           </div>
                         </div>
 
                         {/* Safe Absence calculation notification */}
-                        <div className="text-xs pt-1">
+                        <div className="text-xs pt-1.5 border-t border-zinc-100">
                           {isBelow ? (
-                            <div className="text-destructive font-medium bg-destructive/5 border border-destructive/10 rounded-lg p-2.5 flex items-start space-x-2">
-                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                              <span>
-                                Below threshold! You must attend the next <strong className="font-bold underline">{Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))}</strong> {Math.ceil(subj.required_to_attend / (subj.units_per_class || 1)) === 1 ? "class" : "classes"} consecutively to recover.
+                            <div className="text-red-700 font-bold bg-red-50/60 border border-red-100 rounded-xl p-3 flex items-start space-x-2">
+                              <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5 text-red-500" />
+                              <span className="leading-normal">
+                                Below threshold! You must attend the next <strong className="font-extrabold underline">{Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))}</strong> {Math.ceil(subj.required_to_attend / (subj.units_per_class || 1)) === 1 ? "class" : "classes"} consecutively to recover.
                               </span>
                             </div>
                           ) : (
-                            <div className="text-muted-foreground bg-muted/30 border border-border/40 rounded-lg p-2.5 flex items-start space-x-2">
-                              <BookOpen className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
-                              <span>
-                                Attendance Margin: You can safely miss <strong className="font-bold text-foreground">{Math.floor(subj.safe_bunks / (subj.units_per_class || 1))}</strong> more {Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"} safely.
+                            <div className="text-zinc-500 font-bold bg-zinc-50/50 border border-zinc-200 rounded-xl p-3 flex items-start space-x-2">
+                              <BookOpen className="h-4.5 w-4.5 shrink-0 mt-0.5 text-zinc-400" />
+                              <span className="leading-normal">
+                                Attendance Margin: You can safely miss <strong className="font-extrabold text-zinc-800">{Math.floor(subj.safe_bunks / (subj.units_per_class || 1))}</strong> more {Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"}.
                               </span>
                             </div>
                           )}

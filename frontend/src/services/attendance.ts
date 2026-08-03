@@ -8,7 +8,7 @@ export interface LectureOccurrence {
   date: string; // "YYYY-MM-DD"
   start_time: string; // "HH:MM:SS" or "HH:MM"
   end_time: string;
-  attendance_status: "unmarked" | "present" | "absent" | "cancelled";
+  attendance_status: "unmarked" | "present" | "absent" | "cancelled" | "holiday" | "medical_leave" | "other";
   subject: Subject;
 }
 
@@ -71,7 +71,7 @@ export const attendanceService = {
     return response.data;
   },
 
-  async updateStatus(semesterId: number, occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked"): Promise<LectureOccurrence> {
+  async updateStatus(semesterId: number, occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked" | "holiday" | "medical_leave" | "other"): Promise<LectureOccurrence> {
     const response = await api.put(`/semesters/${semesterId}/attendance/${occurrenceId}`, { status });
     return response.data;
   },

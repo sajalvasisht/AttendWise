@@ -9,9 +9,10 @@ class SubjectBase(BaseModel):
     units_per_class: int = Field(default=1, ge=1)
     units_earned_per_class: int = Field(default=1, ge=1)
     units_lost_per_class: int = Field(default=1, ge=1)
+    track_attendance: bool = Field(default=True)
 
 class SubjectCreate(SubjectBase):
-    pass
+    track_attendance: Optional[bool] = None
 
 class SubjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -21,6 +22,7 @@ class SubjectUpdate(BaseModel):
     units_per_class: Optional[int] = Field(default=None, ge=1)
     units_earned_per_class: Optional[int] = Field(default=None, ge=1)
     units_lost_per_class: Optional[int] = Field(default=None, ge=1)
+    track_attendance: Optional[bool] = None
 
 class SubjectResponse(SubjectBase):
     id: int

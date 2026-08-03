@@ -76,7 +76,7 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
     }
 
 def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
-    subjects = db.query(Subject).filter(Subject.semester_id == semester_id).all()
+    subjects = db.query(Subject).filter(Subject.semester_id == semester_id, Subject.track_attendance == True).all()
     
     subject_stats = []
     total_lectures = 0

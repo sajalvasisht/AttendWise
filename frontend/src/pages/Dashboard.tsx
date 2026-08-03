@@ -122,7 +122,7 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, []);
 
-  const handleStatusChange = async (occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked") => {
+  const handleStatusChange = async (occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked" | "holiday" | "medical_leave" | "other") => {
     if (!semester) return;
     setUpdatingId(occurrenceId);
     setError(null);
@@ -186,7 +186,6 @@ const Dashboard: React.FC = () => {
     if (!semester || !extractedData) return;
     setSavingReplace(true);
     try {
-      // Map extracted slot subject names to database subject IDs
       const slotsToSave = extractedData.timetable_slots.map((slot: any) => {
         const matched = subjects.find(s => 
           s.name.toLowerCase() === slot.subject_name.toLowerCase() ||
@@ -248,32 +247,11 @@ const Dashboard: React.FC = () => {
           date: ev.date,
           event_type: mappedType,
           description: ev.description || ev.title,
-          timetable_day_override: ev.timetable_day_override !== undefined ? ev.timetable_day_override : undefined,
-          subject_id: matched ? matched.subject_id : undefined,
-          start_time: ev.start_time || undefined,
-          end_time: ev.end_time || undefined
+          subject_id: matched ? matched.subject_id : null
         };
       });
 
-      let finalEvents = parsedEvents;
-      if (calendarMergeMode === "merge") {
-        const currentEventsResponse = await calendarService.list(semester.id);
-        const existingEvents = currentEventsResponse.map((e: any) => ({
-          date: e.date,
-          event_type: e.event_type,
-          description: e.description,
-          timetable_day_override: e.timetable_day_override,
-          subject_id: e.subject_id,
-          start_time: e.start_time,
-          end_time: e.end_time
-        }));
-        // Merge without duplicate dates
-        const newDates = new Set(parsedEvents.map((e: any) => e.date));
-        const filteredExisting = existingEvents.filter((e: any) => !newDates.has(e.date));
-        finalEvents = [...filteredExisting, ...parsedEvents];
-      }
-
-      await calendarService.save(semester.id, finalEvents);
+      await calendarService.save(semester.id, parsedEvents, calendarMergeMode);
       setActiveModal("none");
       setUploadFile(null);
       setExtractedData(null);
@@ -295,106 +273,109 @@ const Dashboard: React.FC = () => {
   const isUninitialized = subjects.length > 0 && !subjects[0].is_initialized;
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased selection:bg-emerald-100 selection:text-emerald-950 flex flex-col font-sans">
       <Navbar />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10 space-y-8">
+      <main className="flex-grow max-w-6xl mx-auto w-full px-6 py-14 space-y-12">
         
         {/* Global Error */}
         {error && (
-          <div className="rounded-xl border border-destructive/15 bg-destructive/5 p-4 text-xs text-destructive flex items-start space-x-3 animate-fade-in shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span className="leading-relaxed">{error}</span>
+          <div className="rounded-2xl border border-red-500/15 bg-red-50/50 p-4.5 text-xs text-red-600 flex items-start space-x-3 animate-fade-in shadow-[0_1px_3px_rgba(15,23,42,0.01)]">
+            <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+            <span className="leading-relaxed font-semibold">{error}</span>
           </div>
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 space-y-4">
-            <Loader2 className="h-7 w-7 animate-spin text-muted-foreground/80" />
-            <p className="text-xs text-muted-foreground">Loading workspace details...</p>
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+            <p className="text-xs text-zinc-400 font-semibold">Loading workspace details...</p>
           </div>
         ) : !semester ? (
-          <div className="flex flex-col items-center justify-center py-24 space-y-4 animate-scale-in">
-            <Loader2 className="h-7 w-7 animate-spin text-muted-foreground/60" />
-            <p className="text-xs text-muted-foreground">Redirecting to onboarding guide...</p>
+          <div className="flex flex-col items-center justify-center py-32 space-y-4 animate-scale-in">
+            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+            <p className="text-xs text-zinc-400 font-semibold">Redirecting to onboarding guide...</p>
           </div>
         ) : (
           /* Active State */
-          <div className="space-y-6">
-            {/* Welcoming Header */}
-            <div className="space-y-1">
-              <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-1.5">
-                <span>{getGreeting()}, {user?.full_name || "Student"}!</span>
-                <span className="text-base">👋</span>
+          <div className="space-y-12">
+            
+            {/* Personalized Header Overview */}
+            <div className="pt-2 pb-2 space-y-1.5">
+              <h1 className="text-3xl font-black tracking-tight text-zinc-900 flex items-center gap-2">
+                <span>{getGreeting()}, {user?.full_name?.split(" ")[0] || "Student"}</span>
+                <span className="text-2xl animate-wave">👋</span>
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-zinc-500 font-medium leading-relaxed max-w-xl">
                 Here is your AttendWise status overview. Keep your planning on track!
               </p>
             </div>
 
             {/* 1. HERO BANNER ROW */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               
               {/* Term Statistics Card */}
-              <div className="border border-border bg-card rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-32">
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block">Semester Profile</span>
-                <div>
-                  <h2 className="text-sm font-semibold tracking-tight text-foreground truncate">{semester.name}</h2>
-                  <div className="flex items-center text-[10px] text-muted-foreground mt-1 space-x-2">
+              <div className="premium-card p-6 flex flex-col justify-between min-h-36">
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block">Semester Profile</span>
+                <div className="mt-3">
+                  <h2 className="text-base font-bold tracking-tight text-zinc-800 truncate">{semester.name}</h2>
+                  <div className="flex items-center text-[11px] text-zinc-400 mt-1.5 space-x-2 font-medium">
                     <span>{semester.start_date}</span>
-                    <ChevronRight className="h-3 w-3" />
+                    <ChevronRight className="h-3.5 w-3.5 text-zinc-300" />
                     <span>{semester.end_date}</span>
                   </div>
                 </div>
-                <div className="text-[10px] text-muted-foreground font-medium border-t border-border/50 pt-2 flex items-center justify-between">
+                <div className="text-[11px] text-zinc-400 font-bold border-t border-zinc-100 pt-3 flex items-center justify-between mt-4">
                   <span>Days remaining:</span>
-                  <span className="font-semibold text-foreground">{getDaysRemaining()} days</span>
+                  <span className="font-extrabold text-zinc-850">{getDaysRemaining()} days</span>
                 </div>
               </div>
 
               {/* Next Holiday Card */}
-              <div className="border border-border bg-card rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-32">
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block">Calendar Watch</span>
-                <div>
-                  <h2 className="text-xs font-semibold tracking-tight text-foreground">Next Scheduled Break</h2>
-                  <p className="text-sm font-bold text-foreground mt-1 truncate">
+              <div className="premium-card p-6 flex flex-col justify-between min-h-36">
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block">Calendar Watch</span>
+                <div className="mt-3">
+                  <h2 className="text-xs font-bold tracking-tight text-zinc-400 uppercase">Next Break</h2>
+                  <p className="text-sm font-extrabold text-zinc-800 mt-1 truncate">
                     {nextHoliday ? nextHoliday.description || "Holiday" : "None scheduled"}
                   </p>
                 </div>
-                <div className="text-[10px] text-muted-foreground font-medium border-t border-border/50 pt-2 flex items-center justify-between">
+                <div className="text-[11px] text-zinc-400 font-bold border-t border-zinc-100 pt-3 flex items-center justify-between mt-4">
                   <span>Date:</span>
-                  <span className="font-semibold text-foreground">{nextHoliday ? nextHoliday.date : "N/A"}</span>
+                  <span className="font-extrabold text-zinc-850">{nextHoliday ? nextHoliday.date : "N/A"}</span>
                 </div>
               </div>
 
               {/* Attendance Status Card */}
-              <div className="border border-border bg-card rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-32">
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block">Attendance Summary</span>
+              <div className="premium-card p-6 flex flex-col justify-between min-h-36">
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block">Attendance Summary</span>
                 {isUninitialized ? (
-                  <div>
-                    <h2 className="text-xs font-semibold text-destructive">Not Initialized</h2>
-                    <p className="text-[10px] text-muted-foreground leading-normal mt-1">
+                  <div className="mt-3">
+                    <h2 className="text-xs font-extrabold text-red-500 uppercase">Not Initialized</h2>
+                    <p className="text-[10px] text-zinc-450 leading-normal mt-1">
                       Calculations are disabled until baseline values are entered.
                     </p>
                   </div>
                 ) : (
-                  <div>
-                    <h2 className="text-sm font-bold text-foreground">
-                      {subjects.length > 0 ? (subjects.reduce((sum, s) => sum + s.attendance_percent, 0) / subjects.length).toFixed(1) : "0.0"}%
-                    </h2>
-                     <p className="text-[10px] text-muted-foreground mt-1">
-                      Attendance Margin: {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes
-                     </p>
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <div>
+                      <h2 className="text-[26px] font-black text-zinc-900 leading-none">
+                        {subjects.length > 0 ? (subjects.reduce((sum, s) => sum + s.attendance_percent, 0) / subjects.length).toFixed(1) : "0.0"}%
+                      </h2>
+                      <p className="text-[10px] text-zinc-400 font-semibold mt-1">
+                        Attendance Margin: {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes
+                      </p>
+                    </div>
                   </div>
                 )}
-                <div className="border-t border-border/50 pt-2">
+                <div className="border-t border-zinc-100 pt-3 flex items-center justify-between mt-4">
                   {isUninitialized ? (
-                    <Link to="/initialize-attendance" className="text-[10px] font-semibold text-primary hover:underline flex items-center">
-                      Initialize Now <ChevronRight className="h-3 w-3 ml-0.5" />
+                    <Link to="/initialize-attendance" className="text-[11px] font-bold text-zinc-700 hover:text-zinc-900 flex items-center gap-0.5">
+                      Initialize Now <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                   ) : (
-                    <Link to="/summary" className="text-[10px] font-semibold text-primary hover:underline flex items-center">
-                      View Detailed Metrics <ChevronRight className="h-3 w-3 ml-0.5" />
+                    <Link to="/summary" className="text-[11px] font-bold text-zinc-700 hover:text-zinc-900 flex items-center gap-0.5">
+                      View Detailed Metrics <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                   )}
                 </div>
@@ -404,16 +385,16 @@ const Dashboard: React.FC = () => {
 
             {/* 2. ATTENDANCE INITIALIZATION CALLOUT */}
             {isUninitialized && (
-              <div className="rounded-xl border border-destructive/15 bg-destructive/5 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_1px_2px_rgba(0,0,0,0.01)] animate-fade-in">
+              <div className="rounded-2xl border border-red-500/10 bg-red-50/20 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_1px_3px_rgba(15,23,42,0.01)] animate-fade-in">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-destructive">Setup Complete: Attendance Not Initialized</h4>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed max-w-xl">
+                  <h4 className="text-sm font-bold text-red-600">Setup Complete: Attendance Not Initialized</h4>
+                  <p className="text-[12px] text-zinc-500 font-medium max-w-xl">
                     Enter the number of classes conducted and attended so far to activate tracking analytics.
                   </p>
                 </div>
                 <Link 
                   to="/initialize-attendance"
-                  className="rounded-lg bg-primary py-1.5 px-3.5 text-xs font-semibold text-primary-foreground hover:bg-neutral-800 shadow-sm transition-all shrink-0 text-center cursor-pointer"
+                  className="rounded-xl bg-zinc-900 py-2.5 px-4 text-xs font-bold text-white hover:bg-zinc-800 shadow-sm transition-all shrink-0 text-center cursor-pointer"
                 >
                   Initialize Attendance
                 </Link>
@@ -421,97 +402,115 @@ const Dashboard: React.FC = () => {
             )}
 
             {/* 3. WORKING WORKSPACE GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               
               {/* Left & Middle Column (Main Content) */}
-              <div className="md:col-span-2 space-y-8">
+              <div className="lg:col-span-2 space-y-10">
                 
-                {/* TODAY'S SCHEDULE CHECKLIST */}
-                <div className="space-y-4">
-                  <div className="border-b border-border/60 pb-2 flex items-center justify-between">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Today's Schedule
+                {/* TODAY'S SCHEDULE CHECKLIST (Timeline Mode) */}
+                <div className="space-y-6">
+                  <div className="border-b border-zinc-100 pb-3.5 flex items-center justify-between">
+                    <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                      Today's Timeline
                     </h3>
-                    <span className="text-[10px] text-muted-foreground font-medium">
+                    <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">
                       {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
                     </span>
                   </div>
 
                   {isUninitialized ? (
-                    <div className="rounded-xl border border-border bg-card p-6 text-center text-xs text-muted-foreground italic">
+                    <div className="rounded-2xl border border-zinc-200/60 bg-white p-8 text-center text-xs text-zinc-400 italic">
                       Initialize attendance first to access today's checklist.
                     </div>
                   ) : todayExam ? (
-                    <div className="border border-border bg-card rounded-xl p-6 text-center space-y-3">
-                      <div className="mx-auto h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
-                        <Brain className="h-4.5 w-4.5" />
+                    <div className="premium-card p-6 text-center space-y-3">
+                      <div className="mx-auto h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
+                        <Brain className="h-5 w-5" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-bold">{todayExam.description || "Examination"}</h4>
-                        <p className="text-[10px] text-muted-foreground">
+                        <h4 className="text-sm font-bold text-zinc-800">{todayExam.description || "Examination"}</h4>
+                        <p className="text-[11px] text-zinc-400 font-medium">
                           {todayExam.start_time ? `${todayExam.start_time.slice(0, 5)} - ${todayExam.end_time?.slice(0, 5)}` : "All Day"}
                         </p>
                       </div>
-                      <p className="text-[10px] text-amber-600 font-medium">Good luck on your exam!</p>
+                      <p className="text-xs text-amber-600 font-semibold">Good luck on your exam!</p>
                     </div>
                   ) : todayHoliday ? (
-                    <div className="border border-border bg-card rounded-xl p-6 text-center space-y-2">
-                      <div className="mx-auto h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
-                        <CalendarDays className="h-4.5 w-4.5" />
+                    <div className="premium-card p-6 text-center space-y-2.5">
+                      <div className="mx-auto h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500">
+                        <CalendarDays className="h-5 w-5" />
                       </div>
-                      <h4 className="text-xs font-bold">{todayHoliday.description || "Holiday"}</h4>
-                      <span className="text-[9px] text-emerald-600 bg-emerald-500/5 px-2 py-0.5 rounded-full inline-block font-semibold">
+                      <h4 className="text-sm font-bold text-zinc-800">{todayHoliday.description || "Holiday"}</h4>
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block font-extrabold border border-emerald-100">
                         Enjoy your break!
                       </span>
                     </div>
                   ) : todayLectures.length === 0 ? (
-                    <div className="border border-border bg-card rounded-xl p-6 text-center text-xs text-muted-foreground italic">
+                    <div className="premium-card p-8 text-center text-xs text-zinc-400 italic">
                       No classes scheduled today.
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    /* Timeline display checklist nodes */
+                    <div className="relative pl-6 space-y-6">
+                      <div className="absolute left-[9px] top-2.5 bottom-2.5 w-px bg-zinc-200/80" />
+
                       {todayLectures.map((occ) => {
                         const isUpdating = updatingId === occ.id;
-                        return (
-                          <div 
-                            key={occ.id} 
-                            className={`rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-4 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.01)] hover:border-foreground/5 ${
-                              isUpdating ? "opacity-60 pointer-events-none" : ""
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-xs font-semibold text-foreground truncate">{occ.subject.name}</span>
-                                {occ.subject.code && (
-                                  <span className="text-[9px] bg-muted border border-border px-1.5 py-0.2 rounded font-mono uppercase shrink-0">
-                                    {occ.subject.code}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center text-[10px] text-muted-foreground mt-1 space-x-1.5">
-                                <Clock className="h-3 w-3" />
-                                <span>{occ.start_time.slice(0, 5)} - {occ.end_time.slice(0, 5)}</span>
-                              </div>
-                            </div>
+                        const status = occ.attendance_status;
 
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {["present", "absent", "cancelled"].map((status) => (
-                                <button
-                                  key={status}
-                                  onClick={() => handleStatusChange(occ.id, occ.attendance_status === status ? "unmarked" : (status as any))}
-                                  className={`text-[9px] font-semibold py-1 px-2.5 rounded-md border transition-all cursor-pointer uppercase tracking-wider ${
-                                    occ.attendance_status === status
-                                      ? status === "present"
-                                        ? "bg-primary text-primary-foreground border-primary"
-                                        : status === "absent"
-                                          ? "bg-destructive text-destructive-foreground border-destructive"
-                                          : "bg-amber-500 text-white border-amber-500"
-                                      : "bg-background border-border hover:bg-muted text-muted-foreground hover:text-foreground"
-                                  }`}
-                                >
-                                  {status}
-                                </button>
-                              ))}
+                        let nodeColor = "bg-white border-zinc-200";
+                        if (status === "present") nodeColor = "bg-emerald-500 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]";
+                        else if (status === "absent") nodeColor = "bg-red-500 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]";
+                        else if (status === "cancelled") nodeColor = "bg-amber-500 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]";
+
+                        return (
+                          <div key={occ.id} className="relative flex items-start gap-4">
+                            {/* Line node dot */}
+                            <div className={`absolute -left-[21px] top-1.5 h-4 w-4 rounded-full border-2 ${nodeColor} transition-all duration-200 z-10`} />
+
+                            <div 
+                              className={`flex-1 premium-card p-5 flex items-center justify-between gap-6 ${
+                                isUpdating ? "opacity-60 pointer-events-none" : ""
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-bold text-zinc-800 truncate">{occ.subject.name}</span>
+                                  {occ.subject.code && (
+                                    <span className="text-[9px] bg-zinc-100 border border-zinc-200/60 text-zinc-555 px-1.5 py-0.2 rounded font-mono uppercase tracking-wide shrink-0">
+                                      {occ.subject.code}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center text-[11px] text-zinc-450 mt-1.5 space-x-1.5 font-semibold">
+                                  <Clock className="h-3.5 w-3.5 text-zinc-400" />
+                                  <span>{occ.start_time.slice(0, 5)} - {occ.end_time.slice(0, 5)}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {["present", "absent", "cancelled"].map((statusOption) => {
+                                  const isSelected = status === statusOption;
+                                  let btnClass = "";
+                                  if (isSelected) {
+                                    if (statusOption === "present") btnClass = "bg-emerald-500 border-emerald-500 text-white shadow-sm";
+                                    else if (statusOption === "absent") btnClass = "bg-red-500 border-red-500 text-white shadow-sm";
+                                    else btnClass = "bg-amber-500 border-amber-500 text-white shadow-sm";
+                                  } else {
+                                    btnClass = "bg-white border-zinc-200 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700";
+                                  }
+
+                                  return (
+                                    <button
+                                      key={statusOption}
+                                      onClick={() => handleStatusChange(occ.id, status === statusOption ? "unmarked" : (statusOption as any))}
+                                      className={`text-[9px] font-bold py-1.5 px-3 rounded-lg border transition-all cursor-pointer uppercase tracking-widest ${btnClass}`}
+                                    >
+                                      {statusOption}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         );
@@ -521,64 +520,86 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* COURSE STANDINGS GRID */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/60 pb-2">
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-100 pb-3.5">
                     Course Standings
                   </h3>
 
                   {isUninitialized ? (
-                    <div className="rounded-xl border border-border bg-card p-6 text-center text-xs text-muted-foreground italic">
+                    <div className="rounded-2xl border border-zinc-200/60 bg-white p-8 text-center text-xs text-zinc-400 italic">
                       Initialize attendance to display standings.
                     </div>
                   ) : subjects.length === 0 ? (
-                    <div className="rounded-xl border border-border bg-card p-6 text-center text-xs text-muted-foreground italic">
+                    <div className="rounded-2xl border border-zinc-200/60 bg-white p-8 text-center text-xs text-zinc-400 italic">
                       No subjects configured.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {subjects.map((subj) => {
                         const isBelow = subj.attendance_percent < subj.min_attendance_percent;
                         const isWarning = !isBelow && subj.safe_bunks === 0;
                         
-                        let statusColor = "text-emerald-600";
-                        let statusBorder = "border-border hover:border-emerald-600/20";
+                        let textClass = "text-emerald-600";
+                        let barClass = "bg-emerald-500";
+                        let badgeClass = "bg-emerald-50 border-emerald-100 text-emerald-700";
                         if (isBelow) {
-                          statusColor = "text-destructive";
-                          statusBorder = "border-destructive/20";
+                          textClass = "text-red-650";
+                          barClass = "bg-red-500";
+                          badgeClass = "bg-red-50 border-red-100 text-red-700";
                         } else if (isWarning) {
-                          statusColor = "text-amber-600";
-                          statusBorder = "border-amber-500/20";
+                          textClass = "text-amber-600";
+                          barClass = "bg-amber-500";
+                          badgeClass = "bg-amber-50 border-amber-100 text-amber-700";
                         }
+
+                        const insight = isBelow 
+                          ? `Attend next ${Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))} classes`
+                          : isWarning
+                            ? "Cannot miss any class"
+                            : `Can safely miss ${Math.floor(subj.safe_bunks / (subj.units_per_class || 1))} ${Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"}`;
 
                         return (
                           <div 
                             key={subj.subject_id} 
-                            className={`border rounded-xl p-4 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.01)] flex flex-col justify-between space-y-4 hover:shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-all ${statusBorder}`}
+                            className="premium-card p-5 flex flex-col justify-between gap-4"
                           >
-                            <div className="flex justify-between items-start gap-2">
+                            <div className="flex justify-between items-start gap-3">
                               <div className="min-w-0">
-                                <h4 className="text-xs font-semibold text-foreground truncate">{subj.name}</h4>
+                                <h4 className="text-sm font-bold text-zinc-800 truncate">{subj.name}</h4>
                                 {subj.code && (
-                                  <span className="text-[9px] text-muted-foreground font-mono uppercase">
+                                  <span className="text-[9px] text-zinc-400 font-mono uppercase tracking-wide mt-0.5 block">
                                     {subj.code}
                                   </span>
                                 )}
                               </div>
                               <div className="text-right shrink-0">
-                                <span className={`text-xs font-bold ${statusColor}`}>{subj.attendance_percent}%</span>
-                                <span className="block text-[8px] text-muted-foreground font-medium">Req: {subj.min_attendance_percent}%</span>
+                                <span className={`text-[20px] font-black leading-none block ${textClass}`}>
+                                  {subj.attendance_percent.toFixed(1)}%
+                                </span>
+                                <span className="text-[9px] text-zinc-400 font-semibold mt-0.5 block">
+                                  Target: {subj.min_attendance_percent}%
+                                </span>
                               </div>
                             </div>
 
-                            <div className="text-[10px] pt-2 border-t border-border/50 flex items-center justify-between font-medium">
-                              <span className="text-muted-foreground">Status:</span>
-                              <span className={`font-semibold ${statusColor}`}>
-                                {isBelow 
-                                  ? `Attend next ${Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))} classes`
-                                  : isWarning
-                                    ? "Cannot miss any class"
-                                    : `Can safely miss ${Math.floor(subj.safe_bunks / (subj.units_per_class || 1))} ${Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"}`
-                                }
+                            {/* 12px Progress bar visualization */}
+                            <div className="space-y-1 pt-1">
+                              <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full ${barClass} rounded-full transition-all duration-500`} 
+                                  style={{ width: `${Math.min(100, subj.attendance_percent)}%` }} 
+                                />
+                              </div>
+                              <div className="flex justify-between text-[8px] text-zinc-450 font-bold font-mono">
+                                <span>0%</span>
+                                <span>100%</span>
+                              </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-zinc-100 flex items-center justify-between text-[11px] font-semibold">
+                              <span className="text-zinc-450 font-bold">Standing Status:</span>
+                              <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-extrabold ${badgeClass}`}>
+                                {insight}
                               </span>
                             </div>
                           </div>
@@ -591,52 +612,52 @@ const Dashboard: React.FC = () => {
               </div>
 
               {/* Right Column (Sidebars & Actions) */}
-              <div className="space-y-6">
+              <div className="space-y-8">
                 
                 {/* QUICK ACTIONS */}
-                <div className="border border-border bg-card rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
-                  <h4 className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Quick Actions</h4>
+                <div className="premium-card p-6 space-y-4">
+                  <h4 className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Quick Actions</h4>
                   
                   <div className="space-y-2">
                     <button
                       onClick={() => setActiveModal("replace_timetable")}
-                      className="w-full flex items-center justify-between text-left text-xs font-semibold text-muted-foreground hover:text-foreground py-2 px-3 rounded-lg hover:bg-muted/60 transition-all cursor-pointer"
+                      className="w-full flex items-center justify-between text-left text-xs font-bold text-zinc-500 hover:text-zinc-800 py-2.5 px-3 rounded-xl hover:bg-zinc-100/60 transition-all cursor-pointer border border-transparent"
                     >
-                      <span className="flex items-center"><RefreshCw className="h-3.5 w-3.5 mr-2 shrink-0" /> Replace Timetable</span>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/45" />
+                      <span className="flex items-center"><RefreshCw className="h-4 w-4 mr-2.5 text-zinc-400" /> Replace Timetable</span>
+                      <ChevronRight className="h-4 w-4 text-zinc-300" />
                     </button>
 
                     <button
                       onClick={() => setActiveModal("replace_calendar")}
-                      className="w-full flex items-center justify-between text-left text-xs font-semibold text-muted-foreground hover:text-foreground py-2 px-3 rounded-lg hover:bg-muted/60 transition-all cursor-pointer"
+                      className="w-full flex items-center justify-between text-left text-xs font-bold text-zinc-500 hover:text-zinc-800 py-2.5 px-3 rounded-xl hover:bg-zinc-100/60 transition-all cursor-pointer border border-transparent"
                     >
-                      <span className="flex items-center"><CalendarDays className="h-3.5 w-3.5 mr-2 shrink-0" /> Replace Calendar</span>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/45" />
+                      <span className="flex items-center"><CalendarDays className="h-4 w-4 mr-2.5 text-zinc-400" /> Replace Calendar</span>
+                      <ChevronRight className="h-4 w-4 text-zinc-300" />
                     </button>
 
                     <button
                       onClick={() => setActiveModal("restart")}
-                      className="w-full flex items-center justify-between text-left text-xs font-semibold text-destructive/80 hover:text-destructive py-2 px-3 rounded-lg hover:bg-destructive/5 transition-all cursor-pointer"
+                      className="w-full flex items-center justify-between text-left text-xs font-bold text-red-500/80 hover:text-red-600 py-2.5 px-3 rounded-xl hover:bg-red-50/40 transition-all cursor-pointer border border-transparent"
                     >
-                      <span className="flex items-center"><Trash2 className="h-3.5 w-3.5 mr-2 shrink-0" /> Restart Setup</span>
-                      <ChevronRight className="h-3.5 w-3.5 text-destructive/30" />
+                      <span className="flex items-center"><Trash2 className="h-4 w-4 mr-2.5 text-red-400" /> Restart Setup</span>
+                      <ChevronRight className="h-4 w-4 text-red-300" />
                     </button>
                   </div>
                 </div>
 
                 {/* UPCOMING ASSESSMENTS */}
-                <div className="border border-border bg-card rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
-                  <h4 className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Upcoming Assessments</h4>
+                <div className="premium-card p-6 space-y-4">
+                  <h4 className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Upcoming Assessments</h4>
                   
                   {upcomingAssessments.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground italic">No assessments scheduled.</p>
+                    <p className="text-[11px] text-zinc-400 italic">No assessments scheduled.</p>
                   ) : (
                     <div className="space-y-3">
                       {upcomingAssessments.map((a, idx) => (
-                        <div key={idx} className="flex justify-between items-start text-xs border-b border-border/40 pb-2.5 last:border-0 last:pb-0">
+                        <div key={idx} className="flex justify-between items-start text-xs border-b border-zinc-100 pb-3 last:border-0 last:pb-0">
                           <div className="min-w-0">
-                            <span className="font-semibold text-foreground block truncate" title={a.description}>{a.description}</span>
-                            <span className="text-[9px] text-muted-foreground mt-0.5 block">{a.date}</span>
+                            <span className="font-bold text-zinc-800 block truncate" title={a.description}>{a.description}</span>
+                            <span className="text-[9px] text-zinc-400 mt-0.5 block font-bold font-mono">{a.date}</span>
                           </div>
                         </div>
                       ))}
@@ -646,22 +667,28 @@ const Dashboard: React.FC = () => {
 
                 {/* PLANNER SUGGESTIONS */}
                 {!isUninitialized && (
-                  <div className="border border-border bg-card rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
-                    <h4 className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Planner Suggestions</h4>
+                  <div className="premium-card p-6 space-y-4">
+                    <h4 className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Leave Suggestions</h4>
                     
                     {plannerSuggestions.length === 0 ? (
-                      <p className="text-[10px] text-muted-foreground italic">No leave suggestions found.</p>
+                      <p className="text-[11px] text-zinc-400 italic">No leave suggestions found.</p>
                     ) : (
                       <div className="space-y-3">
                         {plannerSuggestions.map((s, idx) => (
-                          <div key={idx} className="flex flex-col space-y-1 text-xs border-b border-border/40 pb-2.5 last:border-0 last:pb-0">
-                            <span className="font-semibold text-foreground truncate">{s.label}</span>
-                            <span className="text-[9px] text-muted-foreground">
+                          <div key={idx} className="flex flex-col space-y-1.5 text-xs border-b border-zinc-100 pb-3 last:border-0 last:pb-0">
+                            <span className="font-bold text-zinc-800 truncate">{s.label}</span>
+                            <span className="text-[10px] text-zinc-450 font-semibold font-mono">
                               {s.start_date} to {s.end_date} ({s.missed_classes_count} classes)
                             </span>
-                            <span className={`text-[9px] font-semibold mt-0.5 inline-block ${s.is_safe ? "text-emerald-600" : "text-destructive"}`}>
-                              {s.is_safe ? "✓ Safe Leave" : "⚠️ Drops below requirement"}
-                            </span>
+                            <div>
+                              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                                s.is_safe 
+                                  ? "bg-emerald-50 border-emerald-100 text-emerald-700" 
+                                  : "bg-red-50 border-red-100 text-red-700"
+                              }`}>
+                                {s.is_safe ? "✓ Safe Leave" : "⚠️ Drops below req"}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -680,23 +707,33 @@ const Dashboard: React.FC = () => {
 
       {/* 4. MODALS & POPUPS */}
       {activeModal !== "none" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-6">
-          <div className="border border-border bg-card rounded-xl max-w-md w-full p-6 shadow-xl space-y-5 animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/20 backdrop-blur-[3px] p-6">
+          <div className="bg-white rounded-[28px] border border-zinc-200/50 max-w-md w-full p-8 shadow-[0_20px_50px_rgba(15,23,42,0.12)] space-y-6 animate-scale-in">
             
             {/* Modal Headers */}
             {activeModal === "restart" && (
               <>
                 <div className="space-y-2">
-                  <h3 className="text-sm font-bold text-destructive flex items-center">
-                    <Trash2 className="h-4.5 w-4.5 mr-2 shrink-0" /> Restart Semester Setup
+                  <h3 className="text-base font-black text-red-650 flex items-center">
+                    <Trash2 className="h-5 w-5 mr-2 shrink-0" /> Restart Semester Setup
                   </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-[12px] text-zinc-500 leading-relaxed">
                     This action is permanent and will immediately delete all timetable slots, calendar exceptions, generated occurrences, and your marked attendance history.
                   </p>
                 </div>
                 <div className="flex items-center justify-end space-x-3 pt-2">
-                  <button onClick={() => setActiveModal("none")} className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold hover:bg-muted transition-all cursor-pointer">Cancel</button>
-                  <button onClick={handleRestartSetup} className="rounded-lg bg-destructive text-destructive-foreground px-3.5 py-2 text-xs font-semibold hover:bg-red-700 transition-all cursor-pointer">Delete Everything</button>
+                  <button 
+                    onClick={() => setActiveModal("none")} 
+                    className="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleRestartSetup} 
+                    className="rounded-xl bg-red-600 text-white px-4 py-2.5 text-xs font-bold hover:bg-red-755 transition-all cursor-pointer shadow-sm"
+                  >
+                    Delete Everything
+                  </button>
                 </div>
               </>
             )}
@@ -704,64 +741,74 @@ const Dashboard: React.FC = () => {
             {activeModal === "replace_timetable" && (
               <>
                 <div className="space-y-2">
-                  <h3 className="text-sm font-bold text-foreground flex items-center">
-                    <RefreshCw className="h-4.5 w-4.5 mr-2 shrink-0 text-primary" /> Replace Timetable
+                  <h3 className="text-base font-black text-zinc-800 flex items-center">
+                    <RefreshCw className="h-5 w-5 mr-2 shrink-0 text-zinc-550" /> Replace Timetable
                   </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-[12px] text-zinc-550 leading-relaxed">
                     Upload an updated timetable PDF or image. Your past marked attendance records will be preserved, while future occurrences will be regenerated.
                   </p>
                 </div>
 
                 {!extractedData ? (
                   <div className="space-y-4">
-                    <div className="border-2 border-dashed border-border/80 rounded-xl p-6 text-center hover:border-foreground/15 transition-all relative">
+                    <div className="border-2 border-dashed border-zinc-200 rounded-2xl p-8 text-center hover:border-zinc-400 transition-all relative bg-zinc-50/50">
                       <input 
                         type="file" 
                         accept="image/*,application/pdf"
                         onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       />
-                      <Upload className="h-6 w-6 text-muted-foreground/60 mx-auto mb-2" />
-                      <span className="text-[11px] font-semibold text-foreground block">
+                      <Upload className="h-7 w-7 text-zinc-400 mx-auto mb-2" />
+                      <span className="text-[12px] font-bold text-zinc-700 block">
                         {uploadFile ? uploadFile.name : "Select or drag updated timetable"}
                       </span>
-                      <span className="text-[9px] text-muted-foreground mt-1 block">PDF or Image up to 5MB</span>
+                      <span className="text-[10px] text-zinc-400 mt-1 block">PDF or Image up to 5MB</span>
                     </div>
 
                     <div className="flex items-center justify-end space-x-3">
-                      <button onClick={() => { setActiveModal("none"); setUploadFile(null); }} className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold hover:bg-muted transition-all cursor-pointer">Cancel</button>
+                      <button 
+                        onClick={() => { setActiveModal("none"); setUploadFile(null); }} 
+                        className="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-all cursor-pointer"
+                      >
+                        Cancel
+                      </button>
                       <button 
                         onClick={handleReplaceTimetableUpload}
                         disabled={!uploadFile || extracting}
-                        className="rounded-lg bg-primary text-primary-foreground px-3.5 py-2 text-xs font-semibold hover:bg-neutral-800 transition-all cursor-pointer disabled:opacity-50 flex items-center"
+                        className="rounded-xl bg-zinc-900 text-white px-4 py-2.5 text-xs font-bold hover:bg-zinc-800 transition-all cursor-pointer disabled:opacity-50 flex items-center shadow-sm"
                       >
-                        {extracting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                        {extracting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 text-white/60" /> : null}
                         Extract Slots
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="rounded-xl border border-border p-4 bg-muted/40 max-h-52 overflow-y-auto space-y-2">
-                      <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block">Extracted Slots Preview</span>
+                    <div className="rounded-xl border border-zinc-200 p-4 bg-zinc-50/50 max-h-52 overflow-y-auto space-y-2">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block mb-1">Extracted Slots Preview</span>
                       {extractedData.timetable_slots.map((slot: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center text-[10px] font-medium border-b border-border/40 pb-1.5 last:border-0 last:pb-0">
-                          <span className="text-foreground">{slot.subject_name}</span>
-                          <span className="text-muted-foreground">{slot.start_time} - {slot.end_time}</span>
+                        <div key={idx} className="flex justify-between items-center text-[11px] font-semibold border-b border-zinc-100 pb-1.5 last:border-0 last:pb-0">
+                          <span className="text-zinc-700">{slot.subject_name}</span>
+                          <span className="text-zinc-500">{slot.start_time} - {slot.end_time}</span>
                         </div>
                       ))}
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <button onClick={() => setExtractedData(null)} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">← Back</button>
+                      <button onClick={() => setExtractedData(null)} className="text-[11px] font-bold text-zinc-400 hover:text-zinc-700">← Back</button>
                       <div className="flex items-center space-x-3">
-                        <button onClick={() => { setActiveModal("none"); setUploadFile(null); setExtractedData(null); }} className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold hover:bg-muted transition-all cursor-pointer">Cancel</button>
+                        <button 
+                          onClick={() => { setActiveModal("none"); setUploadFile(null); setExtractedData(null); }} 
+                          className="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-all cursor-pointer"
+                        >
+                          Cancel
+                        </button>
                         <button 
                           onClick={handleConfirmReplaceTimetable}
                           disabled={savingReplace}
-                          className="rounded-lg bg-primary text-primary-foreground px-3.5 py-2 text-xs font-semibold hover:bg-neutral-800 transition-all cursor-pointer flex items-center"
+                          className="rounded-xl bg-zinc-900 text-white px-4 py-2.5 text-xs font-bold hover:bg-zinc-800 transition-all cursor-pointer flex items-center shadow-sm"
                         >
-                          {savingReplace ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                          {savingReplace ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 text-white/60" /> : null}
                           Replace & Save
                         </button>
                       </div>
@@ -774,83 +821,93 @@ const Dashboard: React.FC = () => {
             {activeModal === "replace_calendar" && (
               <>
                 <div className="space-y-2">
-                  <h3 className="text-sm font-bold text-foreground flex items-center">
-                    <CalendarDays className="h-4.5 w-4.5 mr-2 shrink-0 text-primary" /> Replace Academic Calendar
+                  <h3 className="text-base font-black text-zinc-850 flex items-center">
+                    <CalendarDays className="h-5 w-5 mr-2 shrink-0 text-zinc-550" /> Replace Academic Calendar
                   </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-[12px] text-zinc-550 leading-relaxed">
                     Upload an updated academic calendar document. Choose whether to merge new exceptions or completely replace the existing calendar events.
                   </p>
                 </div>
 
                 {!extractedData ? (
                   <div className="space-y-4">
-                    <div className="flex items-center space-x-3 rounded-lg border border-border/80 p-2 text-center text-xs">
+                    <div className="flex items-center space-x-2 rounded-xl border border-zinc-200 p-1 text-center text-[11px] bg-zinc-50/50">
                       <button 
                         onClick={() => setCalendarMergeMode("replace")}
-                        className={`flex-1 py-1.5 rounded font-semibold transition-all cursor-pointer ${
-                          calendarMergeMode === "replace" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/40"
+                        className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          calendarMergeMode === "replace" ? "bg-white text-zinc-800 shadow-sm border border-zinc-200/50" : "text-zinc-500 hover:bg-zinc-100/50"
                         }`}
                       >
                         Replace Calendar
                       </button>
                       <button 
                         onClick={() => setCalendarMergeMode("merge")}
-                        className={`flex-1 py-1.5 rounded font-semibold transition-all cursor-pointer ${
-                          calendarMergeMode === "merge" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/40"
+                        className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          calendarMergeMode === "merge" ? "bg-white text-zinc-800 shadow-sm border border-zinc-200/50" : "text-zinc-500 hover:bg-zinc-100/50"
                         }`}
                       >
                         Merge Calendar
                       </button>
                     </div>
 
-                    <div className="border-2 border-dashed border-border/80 rounded-xl p-6 text-center hover:border-foreground/15 transition-all relative">
+                    <div className="border-2 border-dashed border-zinc-200 rounded-2xl p-8 text-center hover:border-zinc-400 transition-all relative bg-zinc-50/50">
                       <input 
                         type="file" 
                         accept="image/*,application/pdf"
                         onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       />
-                      <Upload className="h-6 w-6 text-muted-foreground/60 mx-auto mb-2" />
-                      <span className="text-[11px] font-semibold text-foreground block">
+                      <Upload className="h-7 w-7 text-zinc-400 mx-auto mb-2" />
+                      <span className="text-[12px] font-bold text-zinc-700 block">
                         {uploadFile ? uploadFile.name : "Select or drag calendar file"}
                       </span>
-                      <span className="text-[9px] text-muted-foreground mt-1 block">PDF or Image up to 5MB</span>
+                      <span className="text-[10px] text-zinc-400 mt-1 block">PDF or Image up to 5MB</span>
                     </div>
 
                     <div className="flex items-center justify-end space-x-3">
-                      <button onClick={() => { setActiveModal("none"); setUploadFile(null); }} className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold hover:bg-muted transition-all cursor-pointer">Cancel</button>
+                      <button 
+                        onClick={() => { setActiveModal("none"); setUploadFile(null); }} 
+                        className="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-all cursor-pointer"
+                      >
+                        Cancel
+                      </button>
                       <button 
                         onClick={handleReplaceCalendarUpload}
                         disabled={!uploadFile || extracting}
-                        className="rounded-lg bg-primary text-primary-foreground px-3.5 py-2 text-xs font-semibold hover:bg-neutral-800 transition-all cursor-pointer disabled:opacity-50 flex items-center"
+                        className="rounded-xl bg-zinc-900 text-white px-4 py-2.5 text-xs font-bold hover:bg-zinc-800 transition-all cursor-pointer disabled:opacity-50 flex items-center shadow-sm"
                       >
-                        {extracting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                        {extracting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 text-white/60" /> : null}
                         Extract Events
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="rounded-xl border border-border p-4 bg-muted/40 max-h-52 overflow-y-auto space-y-2">
-                      <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block">Extracted Events Preview ({calendarMergeMode})</span>
+                    <div className="rounded-xl border border-zinc-200 p-4 bg-zinc-50/50 max-h-52 overflow-y-auto space-y-2">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block mb-1">Extracted Events Preview ({calendarMergeMode})</span>
                       {extractedData.events.map((ev: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center text-[10px] font-medium border-b border-border/40 pb-1.5 last:border-0 last:pb-0">
-                          <span className="text-foreground">{ev.title}</span>
-                          <span className="text-muted-foreground">{ev.date}</span>
+                        <div key={idx} className="flex justify-between items-center text-[11px] font-semibold border-b border-zinc-100 pb-1.5 last:border-0 last:pb-0">
+                          <span className="text-zinc-700">{ev.title}</span>
+                          <span className="text-zinc-500">{ev.date}</span>
                         </div>
                       ))}
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <button onClick={() => setExtractedData(null)} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">← Back</button>
+                      <button onClick={() => setExtractedData(null)} className="text-[11px] font-bold text-zinc-400 hover:text-zinc-700">← Back</button>
                       <div className="flex items-center space-x-3">
-                        <button onClick={() => { setActiveModal("none"); setUploadFile(null); setExtractedData(null); }} className="rounded-lg border border-border px-3.5 py-2 text-xs font-semibold hover:bg-muted transition-all cursor-pointer">Cancel</button>
+                        <button 
+                          onClick={() => { setActiveModal("none"); setUploadFile(null); setExtractedData(null); }} 
+                          className="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-all cursor-pointer"
+                        >
+                          Cancel
+                        </button>
                         <button 
                           onClick={handleConfirmReplaceCalendar}
                           disabled={savingReplace}
-                          className="rounded-lg bg-primary text-primary-foreground px-3.5 py-2 text-xs font-semibold hover:bg-neutral-800 transition-all cursor-pointer flex items-center"
+                          className="rounded-xl bg-zinc-900 text-white px-4 py-2.5 text-xs font-bold hover:bg-zinc-800 transition-all cursor-pointer flex items-center shadow-sm"
                         >
-                          {savingReplace ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                          {savingReplace ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 text-white/60" /> : null}
                           Save Changes
                         </button>
                       </div>
@@ -865,7 +922,7 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Footer */}
-      <footer className="max-w-5xl mx-auto w-full px-6 border-t border-border/40 py-8 flex justify-between items-center text-[9px] text-muted-foreground tracking-wide font-medium">
+      <footer className="max-w-6xl mx-auto w-full px-6 border-t border-zinc-100 py-10 flex justify-between items-center text-[9px] text-zinc-400 tracking-widest font-bold">
         <span>ATTENDWISE</span>
         <span>2026 SEMESTER PLANNER</span>
       </footer>

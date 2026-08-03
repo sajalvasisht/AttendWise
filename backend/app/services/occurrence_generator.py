@@ -93,6 +93,8 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
         if is_working:
             day_slots = [s for s in slots if s.day_of_week == timetable_weekday]
             for slot in day_slots:
+                if slot.subject and not slot.subject.track_attendance:
+                    continue
                 key = (slot.subject_id, current_date, slot.start_time, slot.end_time)
                 if key not in marked_keys:
                     new_occurrences.append(

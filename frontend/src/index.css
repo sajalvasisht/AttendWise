@@ -27,41 +27,72 @@
     --color-input: var(--input);
     --color-ring: var(--ring);
     
-    --radius-lg: 12px;
-    --radius-md: 10px;
-    --radius-sm: 8px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
 }
 
 :root {
-    --background: #FAFAF8;
-    --foreground: #1E1E1C;
+    --background: #fcfdfd;
+    --foreground: #0f172a;
     
-    --card: #FFFFFF;
-    --card-foreground: #1E1E1C;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
     
-    --popover: #FFFFFF;
-    --popover-foreground: #1E1E1C;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
     
-    --primary: #1E1E1C;
-    --primary-foreground: #FAFAF8;
+    --primary: #0f172a;
+    --primary-foreground: #ffffff;
     
-    --secondary: #F1F1EE;
-    --secondary-foreground: #1E1E1C;
+    --secondary: #f8fafc;
+    --secondary-foreground: #0f172a;
     
-    --muted: #F5F5F2;
-    --muted-foreground: #6F6F6C;
+    --muted: #f8fafc;
+    --muted-foreground: #64748b;
     
-    --accent: #EDEDE9;
-    --accent-foreground: #1E1E1C;
+    --accent: #f1f5f9;
+    --accent-foreground: #0f172a;
     
-    --destructive: #D9383A;
-    --destructive-foreground: #FAFAF8;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
     
-    --border: #E8E8E4;
-    --input: #E8E8E4;
-    --ring: #1E1E1C;
+    --border: rgba(15, 23, 42, 0.05);
+    --input: rgba(15, 23, 42, 0.05);
+    --ring: #0f172a;
     
-    --radius: 12px;
+    --radius: 20px;
+}
+
+/* Force light theme colors on .dark to make app visual layout consistent with login white style */
+.dark {
+    --background: #fcfdfd;
+    --foreground: #0f172a;
+    
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    
+    --primary: #0f172a;
+    --primary-foreground: #ffffff;
+    
+    --secondary: #f8fafc;
+    --secondary-foreground: #0f172a;
+    
+    --muted: #f8fafc;
+    --muted-foreground: #64748b;
+    
+    --accent: #f1f5f9;
+    --accent-foreground: #0f172a;
+    
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    
+    --border: rgba(15, 23, 42, 0.05);
+    --input: rgba(15, 23, 42, 0.05);
+    --ring: #0f172a;
 }
 
 /* Base resets & typography */
@@ -74,10 +105,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom subtle scrollbar */
+/* Custom premium subtle scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -85,42 +116,27 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #E8E8E4;
+  background: rgba(15, 23, 42, 0.08);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #D5D5D0;
+  background: rgba(15, 23, 42, 0.15);
 }
 
-.dark {
-    --background: #0B0B0C;
-    --foreground: #F3F3F5;
-    
-    --card: #141416;
-    --card-foreground: #F3F3F5;
-    
-    --popover: #141416;
-    --popover-foreground: #F3F3F5;
-    
-    --primary: #F3F3F5;
-    --primary-foreground: #0B0B0C;
-    
-    --secondary: #1F1F22;
-    --secondary-foreground: #F3F3F5;
-    
-    --muted: #1A1A1C;
-    --muted-foreground: #8C8C90;
-    
-    --accent: #242427;
-    --accent-foreground: #F3F3F5;
-    
-    --destructive: #E14E50;
-    --destructive-foreground: #FAFAF8;
-    
-    --border: #242427;
-    --input: #242427;
-    --ring: #F3F3F5;
+/* Custom UI cards styling with lift interactions */
+.premium-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.02), 0 1px 3px rgba(15, 23, 42, 0.01);
+  border-radius: 20px;
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1), border-color 250ms ease;
+}
+
+.premium-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.01);
+  border-color: rgba(15, 23, 42, 0.1);
 }
 
 /* Page Transition Animations */
@@ -130,19 +146,13 @@ body {
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.975); }
+  from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slideIn {
-  from { transform: translateY(6px); opacity: 0; }
+  from { transform: translateY(8px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes wave {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-10deg); }
-  75% { transform: rotate(12deg); }
 }
 
 .animate-fade-in {
@@ -154,11 +164,5 @@ body {
 }
 
 .animate-slide-in {
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-wave {
-  animation: wave 1.5s ease-in-out infinite;
-  display: inline-block;
-  transform-origin: 70% 70%;
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

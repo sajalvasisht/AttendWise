@@ -9,9 +9,10 @@ import { timetableService } from "../services/timetable";
 import { calendarService } from "../services/calendar";
 import { aiService } from "../services/ai";
 import { 
-  GraduationCap, Plus, Trash2, Clock, AlertCircle, ArrowRight, Check, Loader2
+  Plus, Trash2, Clock, AlertCircle, ArrowRight, Check, Loader2
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import { AttendWiseLogo } from "../components/AttendWiseLogo";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -302,11 +303,38 @@ const SetupWizard: React.FC = () => {
         const createdSubjects: Subject[] = [];
         for (const es of extractedSubjects) {
           try {
+            // Find all slots matching this subject
+            const matchingSlots = extractedSlots.filter(slot =>
+              slot.subject_name.toLowerCase() === es.name.toLowerCase() ||
+              (slot.subject_code && es.code && es.code.toLowerCase() === slot.subject_code.toLowerCase())
+            );
+
+            let calculatedUnits = 1;
+            const nameLower = es.name.toLowerCase();
+            if (nameLower.includes("lab") || nameLower.includes("2-hour") || nameLower.includes("2 hour") || nameLower.includes("2hr")) {
+              calculatedUnits = 2;
+            }
+
+            if (matchingSlots.length > 0) {
+              const firstSlot = matchingSlots[0];
+              const [sh, sm] = firstSlot.start_time.split(":").map(Number);
+              const [eh, em] = firstSlot.end_time.split(":").map(Number);
+              const duration = (eh * 60 + em) - (sh * 60 + sm);
+              if (duration === 60) {
+                calculatedUnits = 1;
+              } else if (duration === 120) {
+                calculatedUnits = 2;
+              } else if (duration === 180) {
+                calculatedUnits = 3;
+              }
+            }
+
             const added = await subjectService.create(semester.id, {
               name: es.name,
               code: es.code || undefined,
               faculty: undefined,
-              min_attendance_percent: es.min_attendance_percent
+              min_attendance_percent: es.min_attendance_percent,
+              units_per_class: calculatedUnits,
             });
             createdSubjects.push(added);
           } catch (subjErr) {
@@ -387,9 +415,9 @@ const SetupWizard: React.FC = () => {
   };
 
   // Step 4: Add Timetable Slot
-  const handleAddSlot = (e: React.FormEvent) => {
+  const handleAddSlot = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSubjId) {
+    if (!selectedSubjId || !semester) {
       setError("Please select a subject.");
       return;
     }
@@ -400,8 +428,33 @@ const SetupWizard: React.FC = () => {
       return;
     }
 
+    // Smart Timetable Detection:
+    // Calculate duration in minutes
+    const [sh, sm] = startTime.split(":").map(Number);
+    const [eh, em] = endTime.split(":").map(Number);
+    const duration = (eh * 60 + em) - (sh * 60 + sm);
+    
+    let detectedEntries = 1;
+    if (duration === 60) detectedEntries = 1;
+    else if (duration === 120) detectedEntries = 2;
+    else if (duration === 180) detectedEntries = 3;
+
+    const subjectId = Number(selectedSubjId);
+    const subject = subjects.find(s => s.id === subjectId);
+    
+    if (subject && subject.units_per_class !== detectedEntries) {
+      try {
+        const updated = await subjectService.update(semester.id, subjectId, {
+          units_per_class: detectedEntries
+        });
+        setSubjects(prev => prev.map(s => s.id === subjectId ? updated : s));
+      } catch (err) {
+        console.error("Failed to auto-update subject entries based on slot duration:", err);
+      }
+    }
+
     const newSlot = {
-      subject_id: Number(selectedSubjId),
+      subject_id: subjectId,
       day_of_week: selectedDay,
       start_time: startTime.length === 5 ? `${startTime}:00` : startTime,
       end_time: endTime.length === 5 ? `${endTime}:00` : endTime,
@@ -501,9 +554,7 @@ const SetupWizard: React.FC = () => {
         <header className="border-b border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
           <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                <GraduationCap className="h-4.5 w-4.5 text-foreground" />
-              </div>
+              <AttendWiseLogo size={32} bg="#0f172a" color="#ffffff" />
               <span className="font-semibold text-sm tracking-tight">AttendWise Setup Wizard</span>
             </div>
             <button
@@ -828,7 +879,16 @@ const SetupWizard: React.FC = () => {
                       required
                       placeholder="e.g. Operating Systems"
                       value={subjName}
-                      onChange={(e) => setSubjName(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSubjName(val);
+                        const valLower = val.toLowerCase();
+                        if (valLower.includes("lab") || valLower.includes("2-hour") || valLower.includes("2 hour") || valLower.includes("2hr")) {
+                          setSubjUnitsPerClass(2);
+                        } else {
+                          setSubjUnitsPerClass(1);
+                        }
+                      }}
                       className="block w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
                     />
                   </div>
@@ -868,9 +928,24 @@ const SetupWizard: React.FC = () => {
                     />
                   </div>
                   
-                  {/* Attendance Units Per Class */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Attendance Units Per Class</label>
+                  {/* Attendance Entries Per Scheduled Class */}
+                  <div className="space-y-1.5 animate-scale-in">
+                    <div className="flex items-center space-x-1.5">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Attendance Entries Per Scheduled Class</label>
+                      <div className="group relative inline-block">
+                        <span className="text-zinc-400 hover:text-zinc-600 transition-colors cursor-pointer select-none text-[11px] font-bold">ⓘ</span>
+                        <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-64 bg-zinc-950 text-white text-[10px] p-3.5 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 z-50 leading-relaxed font-normal normal-case tracking-normal">
+                          <p className="font-semibold mb-1 text-white">Some scheduled classes count as multiple attendance entries.</p>
+                          <div className="space-y-0.5 text-zinc-300 mt-1">
+                            <div>• Normal lecture (1 hour) → 1 attendance entry</div>
+                            <div>• 2-hour lecture/lab → 2 attendance entries</div>
+                            <div>• 3-hour workshop → 3 attendance entries</div>
+                          </div>
+                          <p className="mt-1.5 text-zinc-400">AttendWise automatically uses this value while calculating attendance percentages, leave planner results and forecasts.</p>
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-zinc-950"></div>
+                        </div>
+                      </div>
+                    </div>
                     <select
                       value={subjUnitsPerClass}
                       onChange={(e) => {
@@ -884,15 +959,15 @@ const SetupWizard: React.FC = () => {
                       }}
                       className="block w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
                     >
-                      <option value="1">1 Unit (Default)</option>
-                      <option value="2">2 Units</option>
-                      <option value="custom">Custom</option>
+                      <option value="1">1 (Default lecture)</option>
+                      <option value="2">2 (e.g. 2-hour Lab)</option>
+                      <option value="custom">Custom Value</option>
                     </select>
                   </div>
 
                   {subjUnitsPerClass === "custom" && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Custom Units Count</label>
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Custom Attendance Value</label>
                       <input
                         type="number"
                         min="1"

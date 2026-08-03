@@ -10,6 +10,27 @@ import {
   Plus, Trash2, Loader2, AlertCircle, CheckCircle2, AlertTriangle, ArrowRight, Compass
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import { motion } from "framer-motion";
+
+
+function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
+  return {
+    border: `1px solid ${
+      focused
+        ? "rgba(15,23,42,0.3)"
+        : hovered
+        ? "rgba(15,23,42,0.14)"
+        : "rgba(15,23,42,0.08)"
+    }`,
+    backgroundColor: focused ? "#ffffff" : hovered ? "#ffffff" : "#fafafa",
+    boxShadow: focused
+      ? "0 0 0 3px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.02)"
+      : "none",
+    transition:
+      "border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease",
+    outline: "none",
+  };
+}
 
 const LeavePlanner: React.FC = () => {
   const navigate = useNavigate();
@@ -22,6 +43,9 @@ const LeavePlanner: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [dateFocused, setDateFocused] = useState(false);
+  const [dateHovered, setDateHovered] = useState(false);
 
   // Load semester on mount
   useEffect(() => {
@@ -113,16 +137,16 @@ const LeavePlanner: React.FC = () => {
 
   // Determine overall status indicator
   const getOverallStatus = () => {
-    if (!simulation) return { label: "Unknown", color: "text-muted-foreground", bg: "bg-muted/10", border: "border-border" };
+    if (!simulation) return { label: "Unknown", color: "text-zinc-400", bg: "bg-zinc-50/50", border: "border-zinc-200" };
     
     const anyBelow = simulation.subjects.some(s => s.recovery_required);
     if (anyBelow) {
       return {
         label: "Below threshold",
-        color: "text-destructive",
-        bg: "bg-destructive/5",
-        border: "border-destructive/20",
-        icon: <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+        color: "text-red-650",
+        bg: "bg-red-50/60",
+        border: "border-red-100",
+        icon: <AlertCircle className="h-5.5 w-5.5 text-red-500 shrink-0" />
       };
     }
 
@@ -131,64 +155,76 @@ const LeavePlanner: React.FC = () => {
       return {
         label: "Warning",
         color: "text-amber-600",
-        bg: "bg-amber-500/5",
-        border: "border-amber-500/20",
-        icon: <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+        bg: "bg-amber-50/60",
+        border: "border-amber-100",
+        icon: <AlertTriangle className="h-5.5 w-5.5 text-amber-600 shrink-0" />
       };
     }
 
     return {
       label: "Safe",
       color: "text-emerald-600",
-      bg: "bg-emerald-500/5",
-      border: "border-emerald-500/20",
-      icon: <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+      bg: "bg-emerald-50/60",
+      border: "border-emerald-100",
+      icon: <CheckCircle2 className="h-5.5 w-5.5 text-emerald-600 shrink-0" />
     };
   };
 
   const status = getOverallStatus();
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased selection:bg-emerald-100 selection:text-emerald-950 flex flex-col font-sans">
       <Navbar />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 space-y-10">
+      <main className="flex-grow max-w-5xl mx-auto w-full px-6 py-14 space-y-12">
         
+        {/* Header */}
+        <div className="border-b border-zinc-150/60 pb-5">
+          <h1 className="text-2xl font-black tracking-tight text-zinc-900">Leave Planner Simulation</h1>
+          <p className="text-xs text-zinc-500 font-semibold mt-1">Add dates below to forecast how absences affect your attendance requirements.</p>
+        </div>
+
         {/* Error Banner */}
         {error && (
-          <div className="rounded-xl border border-destructive/15 bg-destructive/5 p-4 text-xs text-destructive flex items-start space-x-3">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span className="leading-relaxed">{error}</span>
+          <div className="rounded-2xl border border-red-500/15 bg-red-50/50 p-4 text-xs text-red-650 flex items-start space-x-3">
+            <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+            <span className="leading-relaxed font-semibold">{error}</span>
           </div>
         )}
 
         {initialLoading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="flex flex-col justify-center items-center py-32 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+            <p className="text-xs text-zinc-400 font-semibold">Loading planner...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             
             {/* LEFT COLUMN: Date Picker & Selection List */}
-            <div className="md:col-span-1 space-y-6">
+            <div className="lg:col-span-1 space-y-6">
               
-              <div className="border border-border bg-card rounded-xl p-6 shadow-[0_1px_2px_rgba(0,0,0,0.01)] space-y-4">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-2">
+              <div className="premium-card p-6 space-y-5">
+                <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-100 pb-3">
                   Select Leave Dates
                 </h3>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex space-x-2">
                     <input
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      className="flex-1 rounded-lg border border-border bg-background py-2 px-3 text-xs text-foreground font-medium outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5 cursor-pointer"
+                      onFocus={() => setDateFocused(true)}
+                      onBlur={() => setDateFocused(false)}
+                      onMouseEnter={() => setDateHovered(true)}
+                      onMouseLeave={() => setDateHovered(false)}
+                      style={inputStyle(dateFocused, dateHovered)}
+                      className="flex-grow rounded-xl py-2 px-3 text-xs text-zinc-800 font-medium outline-none transition-all duration-150 cursor-pointer"
                     />
                     <button
                       onClick={handleAddDate}
-                      className="p-2 rounded-lg border border-border bg-background hover:bg-muted text-foreground transition-colors cursor-pointer"
+                      className="p-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-55 text-zinc-500 hover:text-zinc-800 transition-colors cursor-pointer shadow-sm flex items-center justify-center"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -197,14 +233,14 @@ const LeavePlanner: React.FC = () => {
                   {/* Selected Dates List */}
                   <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                     {datesList.length === 0 ? (
-                      <p className="text-[11px] text-muted-foreground italic text-center py-4">No dates added yet.</p>
+                      <p className="text-[11px] text-zinc-400 italic text-center py-6">No dates added yet.</p>
                     ) : (
                       datesList.map(d => (
-                        <div key={d} className="flex items-center justify-between bg-muted/40 border border-border/80 px-2.5 py-1.5 rounded-lg text-xs">
-                          <span>{d}</span>
+                        <div key={d} className="flex items-center justify-between bg-zinc-50 border border-zinc-200/60 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 shadow-sm animate-scale-in">
+                          <span>{new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
                           <button
                             onClick={() => handleRemoveDate(d)}
-                            className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                            className="text-zinc-400 hover:text-red-500 transition-colors cursor-pointer"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -214,75 +250,78 @@ const LeavePlanner: React.FC = () => {
                   </div>
                 </div>
 
-                <button
+                <motion.button
                   onClick={handleSimulate}
                   disabled={loading || datesList.length === 0}
-                  className="w-full inline-flex items-center justify-center rounded-lg bg-primary py-2 px-4 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  whileHover={!(loading || datesList.length === 0) ? { y: -1, boxShadow: "0 6px 18px rgba(15,23,42,0.16)" } : undefined}
+                  whileTap={!(loading || datesList.length === 0) ? { y: 0, scale: 0.99, boxShadow: "0 2px 6px rgba(15,23,42,0.08)" } : undefined}
+                  transition={{ duration: 0.16 }}
+                  className="w-full inline-flex items-center justify-center rounded-xl bg-zinc-900 h-10 text-xs font-bold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer select-none"
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-2 text-white/60" />
                       Simulating...
                     </>
                   ) : (
                     "Run Simulation"
                   )}
-                </button>
+                </motion.button>
               </div>
 
             </div>
 
             {/* RIGHT COLUMN: Results Preview */}
-            <div className="md:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-8">
               
               {!simulation ? (
-                <div className="rounded-2xl border border-border border-dashed bg-card p-12 text-center text-xs text-muted-foreground space-y-4 animate-scale-in">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mx-auto">
-                    <Compass className="h-5 w-5 animate-pulse" />
+                <div className="rounded-[28px] border-2 border-zinc-200 border-dashed bg-white p-12 text-center text-xs text-zinc-400 space-y-4 animate-scale-in">
+                  <div className="h-12 w-12 rounded-full bg-zinc-50 border border-zinc-200 flex items-center justify-center text-zinc-400 mx-auto">
+                    <Compass className="h-6 w-6 animate-pulse" />
                   </div>
                   <div className="space-y-1.5 max-w-sm mx-auto">
-                    <h4 className="text-xs font-bold text-foreground">Ready to Simulate Absences</h4>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <h4 className="text-xs font-bold text-zinc-800">Ready to Simulate Absences</h4>
+                    <p className="text-[11px] text-zinc-550 leading-relaxed font-semibold">
                       Select target leave dates on the left panel, then run the simulator to project the attendance impact on your courses.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   
                   {/* NATURAL LANGUAGE PLANNER EXPLANATIONS CALLOUT */}
-                  <div className={`border rounded-xl p-5 space-y-3 ${
+                  <div className={`border rounded-2xl p-5 space-y-3 ${
                     isSimulationSafe()
-                      ? "bg-emerald-500/5 border-emerald-500/15 text-emerald-800"
-                      : "bg-destructive/5 border-destructive/15 text-destructive"
+                      ? "bg-emerald-50 border-emerald-100 text-emerald-800"
+                      : "bg-red-50 border-red-100 text-red-750"
                   }`}>
-                    <h4 className="text-xs font-bold uppercase tracking-wider flex items-center space-x-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-widest flex items-center space-x-1.5">
                       {isSimulationSafe() ? (
                         <>
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                          <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-600" />
                           <span>Safe to take leave</span>
                         </>
                       ) : (
                         <>
-                          <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+                          <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-650" />
                           <span>Simulation Warning</span>
                         </>
                       )}
                     </h4>
 
-                    <div className="text-xs space-y-2 leading-relaxed">
+                    <div className="text-xs space-y-2 leading-relaxed font-semibold">
                       <div>
                         Leave Duration: <strong>{datesList.length} Days</strong>
                       </div>
                       <div>
                         Classes Missed:{" "}
-                        <strong>
+                        <strong className="text-zinc-800">
                           {simulation.missed_lectures.length > 0
                             ? getMissedLecturesBreakdown()
                             : "None"}
                         </strong>
                       </div>
-                      <div className="border-t border-current/10 pt-2 font-medium">
+                      <div className="border-t border-current/10 pt-2 font-bold text-[11px]">
                         {isSimulationSafe() ? (
                           <span>All subjects remain above required attendance.</span>
                         ) : (
@@ -292,7 +331,7 @@ const LeavePlanner: React.FC = () => {
                               .map((s) => (
                                 <p key={s.subject_id}>
                                   <strong>{s.name}</strong> will fall below required attendance. Attend the next{" "}
-                                  <strong>{s.required_to_attend}</strong> lectures before taking this leave.
+                                  <strong className="underline">{s.required_to_attend}</strong> lectures before taking this leave.
                                 </p>
                               ))}
                           </div>
@@ -302,12 +341,14 @@ const LeavePlanner: React.FC = () => {
                   </div>
 
                   {/* LEAVE PLANNER VISUAL TIMELINE */}
-                  <div className="border border-border bg-card rounded-xl p-6 shadow-[0_1px_2px_rgba(0,0,0,0.01)] space-y-4">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b border-border pb-2">
+                  <div className="premium-card p-6 space-y-5">
+                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-100 pb-3">
                       Leave Timeline Details
                     </h4>
 
-                    <div className="space-y-4 relative pl-4 before:absolute before:left-[22px] before:top-2 before:bottom-2 before:w-0.5 before:bg-border/60">
+                    <div className="relative pl-6 space-y-6">
+                      <div className="absolute left-[9px] top-2 bottom-2 w-px bg-zinc-200/80" />
+
                       {datesList.map((dateStr, idx) => {
                         const dayEvent = allEvents.find(e => e.date === dateStr);
                         const isWeekendDay = () => {
@@ -327,20 +368,20 @@ const LeavePlanner: React.FC = () => {
                           if (["holiday", "college_closure", "exam_break"].includes(dayEvent.event_type)) {
                             dayText = dayEvent.description || "College Holiday";
                             dayBadge = "Holiday";
-                            badgeClass = "bg-emerald-500/5 text-emerald-600 border border-emerald-500/10";
+                            badgeClass = "bg-emerald-50 border-emerald-100 text-emerald-700";
                           } else if (dayEvent.event_type === "exam_day" || dayEvent.event_type === "exam") {
                             dayText = dayEvent.description || "Exam Day";
                             dayBadge = "Exam Day";
-                            badgeClass = "bg-amber-500/5 text-amber-600 border border-amber-500/10";
+                            badgeClass = "bg-amber-50 border-amber-100 text-amber-700";
                           } else {
                             dayText = dayEvent.description || "Exception Event";
                             dayBadge = dayEvent.event_type.replace(/_/g, " ");
-                            badgeClass = "bg-primary/5 text-primary border border-primary/10";
+                            badgeClass = "bg-zinc-100 border border-zinc-200 text-zinc-700";
                           }
                         } else if (isWeekendDay()) {
                           dayText = "Weekend: No lectures scheduled today.";
                           dayBadge = "Weekend";
-                          badgeClass = "bg-muted text-muted-foreground border border-border/80";
+                          badgeClass = "bg-zinc-50 border border-zinc-200 text-zinc-500";
                         } else {
                           const matchingMissed = simulation.missed_lectures.filter(l => l.date === dateStr);
                           if (matchingMissed.length === 0) {
@@ -363,19 +404,19 @@ const LeavePlanner: React.FC = () => {
                         });
 
                         return (
-                          <div key={idx} className="relative flex items-start space-x-4 text-xs">
-                            <div className="absolute left-[3.5px] top-1 h-2.5 w-2.5 rounded-full border-2 border-primary bg-background shadow-sm" />
+                          <div key={idx} className="relative flex items-start text-xs font-semibold">
+                            <div className="absolute -left-[21px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-zinc-900 bg-white z-10 shadow-sm" />
                             
-                            <div className="pl-6 space-y-1 w-full">
+                            <div className="space-y-1 w-full pl-2">
                               <div className="flex items-center space-x-2">
-                                <span className="font-semibold text-foreground">{dateFormatted}</span>
+                                <span className="font-bold text-zinc-800">{dateFormatted}</span>
                                 {dayBadge && (
-                                  <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${badgeClass}`}>
+                                  <span className={`text-[8.5px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full border ${badgeClass}`}>
                                     {dayBadge}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-muted-foreground font-medium">{dayText}</p>
+                              <p className="text-zinc-500 font-medium text-[11px] leading-relaxed">{dayText}</p>
                             </div>
                           </div>
                         );
@@ -384,42 +425,42 @@ const LeavePlanner: React.FC = () => {
                   </div>
 
                   {/* Status Indicator Banner */}
-                  <div className={`border rounded-xl p-6 ${status.bg} ${status.border} flex items-start space-x-4`}>
+                  <div className={`border rounded-2xl p-5 ${status.bg} ${status.border} flex items-start space-x-4`}>
                     {status.icon}
                     <div className="space-y-1">
-                      <h4 className="text-sm font-semibold text-foreground tracking-tight">
+                      <h4 className="text-sm font-bold text-zinc-800 tracking-tight">
                         Projection Status: <span className={status.color}>{status.label}</span>
                       </h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
+                      <p className="text-xs text-zinc-450 font-semibold leading-relaxed">
                         Based on missing {datesList.length} scheduled leave date(s).
                       </p>
                     </div>
                   </div>
 
                   {/* Overall projection card */}
-                  <div className="border border-border bg-card rounded-xl p-6 shadow-[0_1px_2px_rgba(0,0,0,0.01)] space-y-4">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b border-border pb-2">
+                  <div className="premium-card p-6 space-y-4">
+                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-100 pb-3">
                       Overall Semester Projection
                     </h4>
 
                     <div className="grid grid-cols-2 gap-8 text-center">
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Average Attendance</span>
-                        <div className="flex items-center justify-center space-x-2 text-base font-bold">
-                          <span className="text-muted-foreground line-through font-normal">{simulation.overall.current_percent}%</span>
-                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-foreground">{simulation.overall.projected_percent}%</span>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-zinc-450 uppercase font-bold tracking-widest block">Average Attendance</span>
+                        <div className="flex items-center justify-center space-x-2 text-base font-black pt-1">
+                          <span className="text-zinc-400 line-through font-normal">{simulation.overall.current_percent}%</span>
+                          <ArrowRight className="h-4 w-4 text-zinc-450" />
+                          <span className="text-zinc-800">{simulation.overall.projected_percent}%</span>
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Attendance Margin</span>
-                        <div className="flex items-center justify-center space-x-2 text-base font-bold">
-                          <span className="text-muted-foreground line-through font-normal">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-zinc-450 uppercase font-bold tracking-widest block">Attendance Margin</span>
+                        <div className="flex items-center justify-center space-x-2 text-base font-black pt-1">
+                          <span className="text-zinc-400 line-through font-normal">
                             {simulation.subjects.reduce((sum, s) => sum + Math.floor(s.current_safe_bunks / (s.units_per_class || 1)), 0)}
                           </span>
-                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-foreground">
+                          <ArrowRight className="h-4 w-4 text-zinc-450" />
+                          <span className="text-zinc-800">
                             {simulation.subjects.reduce((sum, s) => sum + Math.floor(s.projected_safe_bunks / (s.units_per_class || 1)), 0)}
                           </span>
                         </div>
@@ -429,49 +470,49 @@ const LeavePlanner: React.FC = () => {
 
                   {/* Course comparison list */}
                   <div className="space-y-4">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b border-border pb-2">
+                    <h4 className="text-[10px] font-bold text-zinc-450 uppercase tracking-widest border-b border-zinc-100 pb-3">
                       Course-by-Course Analysis
                     </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {simulation.subjects.map(subj => {
                         const droppedPercent = subj.projected_percent < subj.current_percent;
                         
                         return (
-                          <div key={subj.subject_id} className={`border rounded-xl p-4 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.01)] space-y-3 ${
-                            subj.recovery_required ? "border-destructive/20" : "border-border"
+                          <div key={subj.subject_id} className={`premium-card p-5 space-y-4 ${
+                            subj.recovery_required ? "border-red-200/80 bg-red-50/5" : ""
                           }`}>
                             <div className="flex justify-between items-start">
                               <div className="space-y-0.5">
-                                <h5 className="text-xs font-semibold text-foreground">{subj.name}</h5>
-                                {subj.code && <span className="text-[9px] text-muted-foreground">{subj.code}</span>}
+                                <h5 className="text-sm font-bold text-zinc-800 leading-tight">{subj.name}</h5>
+                                {subj.code && <span className="text-[9px] text-zinc-400 font-mono tracking-wide font-semibold block mt-0.5">{subj.code}</span>}
                               </div>
-                              <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                              <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
                                 subj.recovery_required 
-                                  ? "bg-destructive/10 text-destructive border border-destructive/10" 
-                                  : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/10"
+                                  ? "bg-red-50 border-red-100 text-red-700" 
+                                  : "bg-emerald-50 border-emerald-100 text-emerald-700"
                               }`}>
                                  {subj.recovery_required ? "Warning" : "Safe"}
                               </span>
                             </div>
 
-                            <div className="flex items-center justify-between text-xs border-t border-border/40 pt-2.5">
-                              <span className="text-muted-foreground">Percentage</span>
-                              <div className="flex items-center space-x-1.5 font-semibold">
-                                <span>{subj.current_percent}%</span>
-                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className={droppedPercent ? "text-destructive" : "text-foreground"}>
+                            <div className="flex items-center justify-between text-xs font-semibold border-t border-zinc-100 pt-3">
+                              <span className="text-zinc-450">Percentage</span>
+                              <div className="flex items-center space-x-1.5 font-extrabold">
+                                <span className="text-zinc-400 font-normal">{subj.current_percent}%</span>
+                                <ArrowRight className="h-3 w-3 text-zinc-400" />
+                                <span className={droppedPercent ? "text-red-650" : "text-zinc-800"}>
                                   {subj.projected_percent}%
                                 </span>
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">Safe Absences</span>
-                              <div className="flex items-center space-x-1.5 font-semibold">
-                                <span>{Math.floor(subj.current_safe_bunks / (subj.units_per_class || 1))}</span>
-                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className={subj.projected_safe_bunks < subj.current_safe_bunks ? "text-destructive" : "text-foreground"}>
+                            <div className="flex items-center justify-between text-xs font-semibold">
+                              <span className="text-zinc-450">Safe Absences</span>
+                              <div className="flex items-center space-x-1.5 font-extrabold">
+                                <span className="text-zinc-400 font-normal">{Math.floor(subj.current_safe_bunks / (subj.units_per_class || 1))}</span>
+                                <ArrowRight className="h-3 w-3 text-zinc-400" />
+                                <span className={subj.projected_safe_bunks < subj.current_safe_bunks ? "text-red-650" : "text-zinc-800"}>
                                   {Math.floor(subj.projected_safe_bunks / (subj.units_per_class || 1))}
                                 </span>
                               </div>

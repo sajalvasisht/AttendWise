@@ -10,6 +10,7 @@ export interface Subject {
   units_per_class: number;
   units_earned_per_class: number;
   units_lost_per_class: number;
+  track_attendance: boolean;
 }
 
 export const subjectService = {
@@ -18,7 +19,7 @@ export const subjectService = {
     return response.data;
   },
 
-  async create(semesterId: number, data: { name: string; code?: string; faculty?: string; min_attendance_percent: number; units_per_class?: number; units_earned_per_class?: number; units_lost_per_class?: number }): Promise<Subject> {
+  async create(semesterId: number, data: { name: string; code?: string; faculty?: string; min_attendance_percent: number; units_per_class?: number; units_earned_per_class?: number; units_lost_per_class?: number; track_attendance?: boolean }): Promise<Subject> {
     const response = await api.post(`/semesters/${semesterId}/subjects`, data);
     return response.data;
   },

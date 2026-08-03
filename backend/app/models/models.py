@@ -55,6 +55,7 @@ class Subject(Base):
     units_lost_per_class = Column(Integer, default=1, nullable=False)
     initial_conducted = Column(Integer, default=None, nullable=True)
     initial_attended = Column(Integer, default=None, nullable=True)
+    track_attendance = Column(Boolean, default=True, nullable=False)
 
     semester = relationship("Semester", back_populates="subjects")
     timetable_slots = relationship("TimetableSlot", back_populates="subject", cascade="all, delete-orphan")

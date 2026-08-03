@@ -38,6 +38,23 @@ def create_subject(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     verify_active_semester(semester_id, current_user.id, db)
+    track_attr = subject_in.track_attendance
+    if track_attr is None:
+        code_upper = (subject_in.code or "").upper()
+        name_upper = subject_in.name.upper()
+        if "STS" in code_upper or "STS" in name_upper:
+            track_attr = False
+        else:
+            track_attr = True
+
+    earned_units = subject_in.units_earned_per_class
+    lost_units = subject_in.units_lost_per_class
+    if subject_in.units_per_class != 1:
+        if earned_units == 1:
+            earned_units = subject_in.units_per_class
+        if lost_units == 1:
+            lost_units = subject_in.units_per_class
+
     db_subject = Subject(
         semester_id=semester_id,
         name=subject_in.name,
@@ -45,8 +62,9 @@ def create_subject(
         faculty=subject_in.faculty,
         min_attendance_percent=subject_in.min_attendance_percent,
         units_per_class=subject_in.units_per_class,
-        units_earned_per_class=subject_in.units_earned_per_class,
-        units_lost_per_class=subject_in.units_lost_per_class
+        units_earned_per_class=earned_units,
+        units_lost_per_class=lost_units,
+        track_attendance=track_attr
     )
     db.add(db_subject)
     db.commit()
@@ -83,6 +101,11 @@ def update_subject(
 
     for field, value in subject_in.dict(exclude_unset=True).items():
         setattr(subject, field, value)
+    
+    # Sync earned/lost units if units_per_class was updated
+    if "units_per_class" in subject_in.dict(exclude_unset=True):
+        subject.units_earned_per_class = subject.units_per_class
+        subject.units_lost_per_class = subject.units_per_class
     
     db.commit()
     db.refresh(subject)

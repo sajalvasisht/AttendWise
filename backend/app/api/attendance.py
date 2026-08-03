@@ -25,17 +25,19 @@ def read_lecture_occurrences(
     verify_semester_owner(semester_id, current_user.id, db)
 
     if start_date and end_date:
-        return db.query(LectureOccurrence).filter(
+        return db.query(LectureOccurrence).join(Subject).filter(
             LectureOccurrence.semester_id == semester_id,
             LectureOccurrence.date >= start_date,
-            LectureOccurrence.date <= end_date
+            LectureOccurrence.date <= end_date,
+            Subject.track_attendance == True
         ).order_by(LectureOccurrence.date, LectureOccurrence.start_time).all()
     
     target_date = date_query if date_query else date.today()
     
-    return db.query(LectureOccurrence).filter(
+    return db.query(LectureOccurrence).join(Subject).filter(
         LectureOccurrence.semester_id == semester_id,
-        LectureOccurrence.date == target_date
+        LectureOccurrence.date == target_date,
+        Subject.track_attendance == True
     ).order_by(LectureOccurrence.start_time).all()
 
 @router.get("/today", response_model=List[LectureOccurrenceResponse])
@@ -47,9 +49,10 @@ def read_today_occurrences(
     verify_semester_owner(semester_id, current_user.id, db)
     
     today_date = date.today()
-    return db.query(LectureOccurrence).filter(
+    return db.query(LectureOccurrence).join(Subject).filter(
         LectureOccurrence.semester_id == semester_id,
-        LectureOccurrence.date == today_date
+        LectureOccurrence.date == today_date,
+        Subject.track_attendance == True
     ).order_by(LectureOccurrence.start_time).all()
 
 @router.put("/{occurrence_id}", response_model=LectureOccurrenceResponse)
@@ -73,7 +76,7 @@ def update_occurrence_status(
             detail="Lecture occurrence not found"
         )
         
-    valid_statuses = {"unmarked", "present", "absent", "cancelled"}
+    valid_statuses = {"unmarked", "present", "absent", "cancelled", "holiday", "medical_leave", "other"}
     status_lower = attendance_in.status.lower()
     if status_lower not in valid_statuses:
         raise HTTPException(

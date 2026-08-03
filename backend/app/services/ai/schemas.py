@@ -17,17 +17,20 @@ class ChatResponse(BaseModel):
 class IntentExtraction(BaseModel):
     intent: str = Field(description=(
         "Identified intent: "
-        "'simulate_leaves' (simulate specific dates/days), "
-        "'safe_bunks_check' (check bunk budget/how many missed), "
+        "'simulate_leaves' (simulate missing specific dates/days), "
+        "'attendance_summary' (current status summary/what is my attendance), "
+        "'get_subject_health' (show risky subjects/risk status), "
+        "'next_event' (when is my next holiday/event), "
+        "'simulate_attendance' (what happens if I attend every class next week/simulate perfect attendance), "
         "'suggest_leaves' (get safe leave suggestions), "
-        "'attendance_summary' (current status/risky subjects summary), "
-        "'unknown' (query is outside attendance tracking/academic scheduling domain)"
+        "'unknown' (query is outside domain)"
     ))
     subject_name: Optional[str] = Field(None, description="Name or code of the subject if the query is subject-specific (e.g. Operating Systems, CS301)")
     relative_date_terms: List[str] = Field(default=[], description="Relative date descriptors found in user query (e.g. 'tomorrow', 'next Friday', 'Monday', 'next week')")
     concrete_dates: List[str] = Field(default=[], description="Explicit concrete dates found in YYYY-MM-DD format if mentioned")
     is_ambiguous: bool = Field(default=False, description="True if dates/subjects are ambiguous and need clarification")
     clarification_question: Optional[str] = Field(None, description="Short clarification question if is_ambiguous is True")
+
 
 # Intermediate structured result DTOs
 class SubjectProjectionDTO(BaseModel):
@@ -41,6 +44,8 @@ class SubjectProjectionDTO(BaseModel):
     is_safe: bool
     recovery_required: bool
     required_to_attend: int
+    units_per_class: int = 1
+
 
 class SimulationResultDTO(BaseModel):
     overall_current_percent: float
@@ -71,8 +76,18 @@ class SubjectSummaryDTO(BaseModel):
     min_attendance_percent: float
     safe_bunks: int
     required_to_attend: int
+    units_per_class: int = 1
+
 
 class SummaryResultDTO(BaseModel):
     overall_percent: float
     overall_safe_bunks: int
     subjects: List[SubjectSummaryDTO]
+
+class NextEventResultDTO(BaseModel):
+    title: Optional[str] = None
+    date: str
+    event_type: str
+    description: Optional[str] = None
+    days_until: int
+

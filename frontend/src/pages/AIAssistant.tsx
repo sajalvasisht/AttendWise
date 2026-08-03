@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { aiService } from "../services/ai";
-import { Send, AlertCircle, Bot, User, Clock, Sparkles } from "lucide-react";
+import { Send, AlertCircle, Bot, User, Clock, Sparkles, Loader2 } from "lucide-react";
 
 interface Message {
   id: string;
@@ -22,6 +22,9 @@ const AIAssistant: React.FC = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [inputFocused, setInputFocused] = useState(false);
+  const [inputHovered, setInputHovered] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -78,23 +81,42 @@ const AIAssistant: React.FC = () => {
     "Show my attendance summary"
   ];
 
+  // Dynamic input styling with a purple focus ring for AI features
+  const inputStyle = (): React.CSSProperties => {
+    return {
+      border: `1px solid ${
+        inputFocused
+          ? "rgba(139,92,246,0.35)"
+          : inputHovered
+          ? "rgba(139,92,246,0.16)"
+          : "rgba(15,23,42,0.08)"
+      }`,
+      backgroundColor: "#ffffff",
+      boxShadow: inputFocused
+        ? "0 0 0 3px rgba(139,92,246,0.06), 0 1px 2px rgba(15,23,42,0.02)"
+        : "none",
+      transition: "border-color 180ms ease, box-shadow 180ms ease",
+      outline: "none",
+    };
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased selection:bg-purple-100 selection:text-purple-950 flex flex-col font-sans">
       <Navbar />
 
-      <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 flex flex-col h-[calc(100vh-3.5rem)]">
+      <main className="flex-grow max-w-3xl mx-auto w-full px-6 py-10 flex flex-col h-[calc(100vh-4rem)]">
         
         {/* Chat Header */}
-        <div className="border-b border-border pb-4 mb-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
-              <Bot className="h-5 w-5 text-foreground" />
+        <div className="border-b border-zinc-150/60 pb-4 mb-5 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200/50 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.02)]">
+              <Bot className="h-5.5 w-5.5 text-purple-500" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">Leave Planner Assistant</h2>
-              <p className="text-[10px] text-muted-foreground flex items-center">
-                <Clock className="h-3 w-3 mr-1" />
-                Academic planning & absence simulations
+              <h2 className="text-sm font-bold tracking-tight text-zinc-800">Leave Planner Assistant</h2>
+              <p className="text-[10px] text-zinc-400 font-bold flex items-center mt-0.5 uppercase tracking-wider">
+                <Clock className="h-3 w-3 mr-1 text-zinc-300" />
+                AI-Powered Simulations
               </p>
             </div>
           </div>
@@ -102,34 +124,34 @@ const AIAssistant: React.FC = () => {
 
         {/* Global Error Banner */}
         {error && (
-          <div className="rounded-xl border border-destructive/15 bg-destructive/5 p-4 mb-4 text-xs text-destructive flex items-start space-x-3 animate-fade-in">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span className="leading-relaxed">{error}</span>
+          <div className="rounded-2xl border border-red-500/15 bg-red-50/50 p-4.5 mb-5 text-xs text-red-650 flex items-start space-x-3 animate-fade-in shadow-[0_1px_3px_rgba(15,23,42,0.01)]">
+            <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+            <span className="leading-relaxed font-semibold">{error}</span>
           </div>
         )}
 
         {/* Messages List Area */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin flex flex-col">
+        <div className="flex-grow overflow-y-auto space-y-6 pr-1 flex flex-col min-h-0">
           {messages.length <= 1 ? (
-            <div className="flex-1 flex flex-col justify-center items-center py-12 text-center max-w-sm mx-auto space-y-5 animate-scale-in">
-              <div className="h-11 w-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm">
-                <Sparkles className="h-5 w-5 animate-pulse" />
+            <div className="flex-grow flex flex-col justify-center items-center py-12 text-center max-w-sm mx-auto space-y-6 animate-scale-in">
+              <div className="h-12 w-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shadow-sm">
+                <Sparkles className="h-5.5 w-5.5 animate-pulse" />
               </div>
-              <div className="space-y-1.5">
-                <h3 className="text-sm font-bold text-foreground">Start chatting with the AI Assistant</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-zinc-800">Start chatting with the AI Assistant</h3>
+                <p className="text-[12px] text-zinc-450 leading-relaxed font-semibold">
                   Query your attendance standing, check margins, or simulate planned leaves in natural language.
                 </p>
               </div>
 
               {/* Suggestion Chips */}
-              <div className="pt-2 flex flex-wrap gap-2 justify-center">
+              <div className="pt-2 flex flex-wrap gap-2.5 justify-center">
                 {suggestions.map((s, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => handleChipClick(s)}
-                    className="text-[10px] font-semibold border border-border bg-card hover:bg-muted/80 text-muted-foreground hover:text-foreground py-1.5 px-3.5 rounded-full transition-all cursor-pointer shadow-sm hover:shadow-[0_1.5px_3px_rgba(0,0,0,0.015)]"
+                    className="text-[10.5px] font-bold border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-500 hover:text-zinc-800 py-2 px-3.5 rounded-full transition-all cursor-pointer shadow-sm uppercase tracking-wider"
                   >
                     {s}
                   </button>
@@ -137,23 +159,23 @@ const AIAssistant: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex items-start space-x-3 max-w-[85%] ${
+                  className={`flex items-start space-x-3.5 max-w-[85%] ${
                     msg.sender === "user" ? "ml-auto flex-row-reverse space-x-reverse" : "mr-auto"
                   }`}
                 >
-                  <div className={`h-7 w-7 rounded-full flex items-center justify-center border text-xs shrink-0 ${
-                    msg.sender === "user" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center border text-xs shrink-0 shadow-sm ${
+                    msg.sender === "user" ? "bg-zinc-900 text-white border-zinc-900" : "bg-white border-zinc-200/60"
                   }`}>
-                    {msg.sender === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                    {msg.sender === "user" ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-purple-500" />}
                   </div>
-                  <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.01)] ${
+                  <div className={`rounded-2xl px-4.5 py-3 text-xs leading-relaxed ${
                     msg.sender === "user" 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-card border border-border text-foreground"
+                      ? "bg-zinc-900 text-white shadow-sm" 
+                      : "bg-white border border-zinc-200/50 text-zinc-850 shadow-[0_4px_12px_rgba(15,23,42,0.02)]"
                   }`}>
                     {msg.text}
                   </div>
@@ -163,14 +185,13 @@ const AIAssistant: React.FC = () => {
           )}
 
           {loading && (
-            <div className="flex items-start space-x-3 mr-auto max-w-[85%] mt-2 animate-scale-in">
-              <div className="h-7 w-7 rounded-full flex items-center justify-center border border-border bg-card text-xs shrink-0">
-                <Bot className="h-3.5 w-3.5" />
+            <div className="flex items-start space-x-3.5 mr-auto max-w-[85%] mt-2 animate-scale-in">
+              <div className="h-8 w-8 rounded-full flex items-center justify-center border border-zinc-200/60 bg-white text-xs shrink-0 shadow-sm">
+                <Bot className="h-4 w-4 text-purple-500" />
               </div>
-              <div className="rounded-2xl px-4 py-3 bg-card border border-border text-foreground flex items-center space-x-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
-                <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce delay-100" />
-                <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce delay-200" />
-                <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce delay-300" />
+              <div className="rounded-2xl px-5 py-3.5 bg-white border border-zinc-200/50 text-zinc-800 flex items-center space-x-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.02)]">
+                <Loader2 className="h-4 w-4 animate-spin text-purple-500 shrink-0" />
+                <span className="text-xs font-semibold text-zinc-555">Calculating attendance...</span>
               </div>
             </div>
           )}
@@ -178,26 +199,31 @@ const AIAssistant: React.FC = () => {
         </div>
 
         {/* Input Bar */}
-        <div className="mt-4 pt-3 border-t border-border/60">
+        <div className="mt-5 pt-4 border-t border-zinc-100 shrink-0">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSend(input);
             }}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2.5"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onMouseEnter={() => setInputHovered(true)}
+              onMouseLeave={() => setInputHovered(false)}
+              style={inputStyle()}
               disabled={loading}
               placeholder="Ask a question about attendance margins or leaves..."
-              className="flex-1 rounded-xl border border-border bg-card py-2.5 px-4 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/25 focus:ring-1 focus:ring-foreground/5 disabled:opacity-60"
+              className="flex-grow rounded-xl py-3 px-4.5 text-[12px] text-zinc-800 placeholder:text-zinc-350 disabled:opacity-60 transition-all duration-150"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
+              className="h-10 w-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-sm hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
             >
               <Send className="h-4 w-4" />
             </button>

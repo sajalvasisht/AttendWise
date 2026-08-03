@@ -280,3 +280,39 @@ def test_exam_day_skips_lectures(db_session):
     # Sept 2 is an exam_day, so Wednesday class is skipped. Only Sept 9 remains.
     assert len(occurrences) == 1
     assert occurrences[0].date == date(2026, 9, 9)
+
+def test_sts_behavior_default(db_session):
+    user = User(email="test@attendwise.com", password_hash=get_password_hash("test"), full_name="Tester")
+    db_session.add(user)
+    db_session.commit()
+    
+    semester = Semester(
+        user_id=user.id,
+        name="STS Term",
+        start_date=date(2026, 9, 1),
+        end_date=date(2026, 9, 10),
+        working_days="0,1,2,3,4"
+    )
+    db_session.add(semester)
+    db_session.commit()
+
+    # Create tracked subject and untracked STS subject
+    phys = Subject(semester_id=semester.id, name="Physics", code="PHYS101", track_attendance=True)
+    sts = Subject(semester_id=semester.id, name="Soft Skills", code="STS101", track_attendance=False)
+    db_session.add_all([phys, sts])
+    db_session.commit()
+
+    phys_slot = TimetableSlot(semester_id=semester.id, subject_id=phys.id, day_of_week=2, start_time=time(9,0), end_time=time(10,0))
+    sts_slot = TimetableSlot(semester_id=semester.id, subject_id=sts.id, day_of_week=2, start_time=time(10,0), end_time=time(11,0))
+    db_session.add_all([phys_slot, sts_slot])
+    db_session.commit()
+
+    generate_occurrences(db_session, semester.id)
+
+    occurrences = db_session.query(LectureOccurrence).filter(LectureOccurrence.semester_id == semester.id).all()
+    # Only Physics occurrences should be generated (total of 2). STS occurrences must be completely skipped.
+    assert len(occurrences) == 2
+    for occ in occurrences:
+        assert occ.subject_id == phys.id
+        assert occ.subject_id != sts.id
+

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GraduationCap, ChevronRight, ChevronLeft, Calendar, Compass, BarChart3, Bot } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface IntroSlide {
   title: string;
@@ -125,34 +126,34 @@ const Welcome: React.FC = () => {
   const IconComponent = activeSlide.icon;
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-accent selection:text-foreground flex flex-col justify-center items-center px-6 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased selection:bg-emerald-100 selection:text-emerald-950 flex flex-col justify-center items-center px-6 py-12 relative overflow-hidden font-sans">
       
       {/* Decorative Blur Orbs */}
-      <div className="absolute top-1/4 left-1/4 h-80 w-80 rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 h-80 w-80 rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 h-85 w-85 rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
 
       {/* Outer Wrapper */}
-      <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center z-10">
+      <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-10 items-center z-10">
         
         {/* Left Side: Copy & Narrative (7 cols) */}
         <div className="md:col-span-7 space-y-6">
           <div className="flex items-center space-x-2.5">
-            <span className="text-[9px] font-bold text-primary uppercase tracking-widest bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
+            <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest bg-zinc-100 border border-zinc-200 px-3 py-1 rounded-full shadow-sm">
               {activeSlide.badgeText}
             </span>
-            <span className="text-[10px] text-muted-foreground font-semibold">
+            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
               Step {currentSlide + 1} of {slides.length}
             </span>
           </div>
 
           <div className="space-y-3.5">
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground leading-tight">
+            <h1 className="text-3xl font-black tracking-tight text-zinc-900 leading-tight">
               {activeSlide.title}
             </h1>
-            <p className="text-sm font-semibold text-muted-foreground">
+            <p className="text-sm font-semibold text-zinc-550 leading-relaxed">
               {activeSlide.tagline}
             </p>
-            <p className="text-xs leading-relaxed text-muted-foreground max-w-md">
+            <p className="text-xs leading-relaxed text-zinc-450 max-w-md font-semibold">
               {activeSlide.description}
             </p>
           </div>
@@ -163,8 +164,8 @@ const Welcome: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  currentSlide === idx ? "w-6 bg-primary" : "w-1.5 bg-border hover:bg-muted-foreground/45"
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  currentSlide === idx ? "w-6 bg-zinc-900" : "w-1.5 bg-zinc-200 hover:bg-zinc-450"
                 }`}
               />
             ))}
@@ -175,23 +176,26 @@ const Welcome: React.FC = () => {
             {currentSlide > 0 && (
               <button
                 onClick={handleBack}
-                className="flex items-center justify-center h-9 w-9 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                className="flex items-center justify-center h-10 w-10 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-500 hover:text-zinc-800 transition-all cursor-pointer shadow-sm"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4.5 w-4.5" />
               </button>
             )}
 
-            <button
+            <motion.button
               onClick={handleNext}
-              className="rounded-xl bg-primary py-2.5 px-6 text-xs font-bold text-primary-foreground hover:bg-neutral-800 transition-all cursor-pointer flex items-center space-x-1.5 shadow-sm active:scale-[0.98]"
+              whileHover={{ y: -1, boxShadow: "0 6px 18px rgba(15,23,42,0.16)" }}
+              whileTap={{ y: 0, scale: 0.99, boxShadow: "0 2px 6px rgba(15,23,42,0.08)" }}
+              transition={{ duration: 0.16 }}
+              className="rounded-xl bg-zinc-900 h-10 px-6 text-xs font-bold text-white shadow-sm hover:bg-zinc-800 transition-all cursor-pointer flex items-center space-x-1.5 select-none"
             >
               <span>{currentSlide === slides.length - 1 ? "Start Onboarding" : "Continue"}</span>
               <ChevronRight className="h-4 w-4" />
-            </button>
+            </motion.button>
 
             <button
               onClick={handleFinishOnboarding}
-              className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="text-xs font-bold text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer select-none"
             >
               Skip Walkthrough
             </button>
@@ -199,29 +203,29 @@ const Welcome: React.FC = () => {
         </div>
 
         {/* Right Side: Interactive Feature Showcase Card (5 cols) */}
-        <div className="md:col-span-5 bg-card border border-border rounded-2xl p-6 shadow-xl space-y-5 animate-scale-in relative overflow-hidden" key={currentSlide}>
+        <div className="md:col-span-5 premium-card p-6 space-y-5 relative overflow-hidden" key={currentSlide}>
           {/* Decorative faint glow */}
-          <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
+          <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-zinc-50/20 blur-2xl pointer-events-none" />
 
           {/* Card Header */}
-          <div className="flex items-center space-x-3 pb-3 border-b border-border/60">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary shrink-0">
-              <IconComponent className="h-5 w-5" />
+          <div className="flex items-center space-x-3 pb-3 border-b border-zinc-150/60">
+            <div className="h-9 w-9 rounded-xl bg-zinc-900/5 border border-zinc-900/10 flex items-center justify-center text-zinc-800 shrink-0">
+              <IconComponent className="h-4.5 w-4.5" />
             </div>
-            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">{activeSlide.featureCard.title}</h3>
+            <h3 className="text-xs font-bold text-zinc-850 uppercase tracking-wider">{activeSlide.featureCard.title}</h3>
           </div>
 
           {/* Card Description */}
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <p className="text-xs text-zinc-500 leading-relaxed font-semibold">
             {activeSlide.featureCard.description}
           </p>
 
           {/* Details list */}
           <ul className="space-y-3 pt-1">
             {activeSlide.featureCard.details.map((detail, idx) => (
-              <li key={idx} className="flex items-start space-x-2.5 text-xs text-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 mt-1.5" />
-                <span className="leading-relaxed text-muted-foreground font-medium">{detail}</span>
+              <li key={idx} className="flex items-start space-x-2.5 text-xs text-[#0f172a]">
+                <span className="h-1.5 w-1.5 rounded-full bg-zinc-900 shrink-0 mt-1.5" />
+                <span className="leading-relaxed text-zinc-500 font-semibold">{detail}</span>
               </li>
             ))}
           </ul>
