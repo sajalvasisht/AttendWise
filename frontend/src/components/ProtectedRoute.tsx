@@ -2,6 +2,8 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Loader2 } from "lucide-react";
+import { FeedbackSystem } from "./FeedbackSystem";
+import { BetaWelcomeModal } from "./BetaWelcomeModal";
 
 interface ProtectedRouteProps {
   children: React.ReactElement;
@@ -22,7 +24,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return (
+    <>
+      {children}
+      <FeedbackSystem />
+      <BetaWelcomeModal />
+    </>
+  );
 };
 
 export default ProtectedRoute;
