@@ -126,3 +126,68 @@ def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
         },
         "subjects": subject_stats
     }
+
+def sync_subject_past_occurrences(db: Session, semester_id: int, subject_id: int, attended: int, missed: int) -> None:
+    from datetime import date, time, timedelta
+    
+    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not semester or not subject:
+        return
+
+    # Delete unmarked/marked occurrences before today for this subject
+    db.query(LectureOccurrence).filter(
+        LectureOccurrence.subject_id == subject.id,
+        LectureOccurrence.date < date.today()
+    ).delete()
+    db.commit()
+
+    # Regenerate occurrences from semester start to yesterday using occurrence generator
+    from app.services.occurrence_generator import generate_occurrences
+    generate_occurrences(db, semester_id, start_from_date=semester.start_date)
+
+    # Now load past occurrences of this subject
+    past_occs = db.query(LectureOccurrence).filter(
+        LectureOccurrence.subject_id == subject.id,
+        LectureOccurrence.date < date.today()
+    ).order_by(LectureOccurrence.date.asc()).all()
+
+    to_conduct = attended + missed
+
+    # If we need more occurrences than generated, add dummy occurrences in the past
+    diff = to_conduct - len(past_occs)
+    if diff > 0:
+        ref_date = subject.active_from or semester.start_date
+        if ref_date >= date.today():
+            ref_date = date.today() - timedelta(days=1)
+        for _ in range(diff):
+            new_occ = LectureOccurrence(
+                semester_id=semester_id,
+                subject_id=subject.id,
+                date=ref_date,
+                start_time=time(9, 0),
+                end_time=time(10, 0),
+                attendance_status="unmarked"
+            )
+            db.add(new_occ)
+        db.commit()
+        # Re-query
+        past_occs = db.query(LectureOccurrence).filter(
+            LectureOccurrence.subject_id == subject.id,
+            LectureOccurrence.date < date.today()
+        ).order_by(LectureOccurrence.date.asc()).all()
+
+    # Mark occurrences
+    for idx, occ in enumerate(past_occs):
+        if idx < attended:
+            occ.attendance_status = "present"
+        elif idx < to_conduct:
+            occ.attendance_status = "absent"
+        else:
+            occ.attendance_status = "unmarked"
+
+    # Zero out database offsets to keep the calendar as the single source of truth
+    subject.initial_conducted = 0
+    subject.initial_attended = 0
+    db.commit()
+

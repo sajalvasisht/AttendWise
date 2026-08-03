@@ -454,15 +454,17 @@ const LeavePlanner: React.FC = () => {
                       </div>
 
                       <div className="space-y-1">
-                        <span className="text-[10px] text-zinc-450 uppercase font-bold tracking-widest block">Attendance Margin</span>
+                        <span className="text-[10px] text-zinc-450 uppercase font-bold tracking-widest block">Safe Lectures Remaining</span>
                         <div className="flex items-center justify-center space-x-2 text-base font-black pt-1">
-                          <span className="text-zinc-400 line-through font-normal">
-                            {simulation.subjects.reduce((sum, s) => sum + Math.floor(s.current_safe_bunks / (s.units_per_class || 1)), 0)}
-                          </span>
+                          <div className="text-zinc-400 line-through font-normal">
+                            {simulation.subjects.reduce((sum, s) => sum + Math.max(0, Math.floor(s.current_safe_bunks / (s.units_per_class || 1))), 0)} sessions
+                            <span className="text-[10px] block text-zinc-400 font-normal">({simulation.subjects.reduce((sum, s) => Math.max(0, sum + s.current_safe_bunks), 0)} entries)</span>
+                          </div>
                           <ArrowRight className="h-4 w-4 text-zinc-450" />
-                          <span className="text-zinc-800">
-                            {simulation.subjects.reduce((sum, s) => sum + Math.floor(s.projected_safe_bunks / (s.units_per_class || 1)), 0)}
-                          </span>
+                          <div className="text-zinc-800">
+                            {simulation.subjects.reduce((sum, s) => sum + Math.max(0, Math.floor(s.projected_safe_bunks / (s.units_per_class || 1))), 0)} sessions
+                            <span className="text-[10px] text-zinc-400 font-semibold block">({simulation.subjects.reduce((sum, s) => Math.max(0, sum + s.projected_safe_bunks), 0)} entries)</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -509,12 +511,16 @@ const LeavePlanner: React.FC = () => {
 
                             <div className="flex items-center justify-between text-xs font-semibold">
                               <span className="text-zinc-450">Safe Absences</span>
-                              <div className="flex items-center space-x-1.5 font-extrabold">
-                                <span className="text-zinc-400 font-normal">{Math.floor(subj.current_safe_bunks / (subj.units_per_class || 1))}</span>
+                              <div className="flex items-center space-x-1.5 font-extrabold text-right">
+                                <div className="text-zinc-400 font-normal">
+                                  {Math.max(0, Math.floor(subj.current_safe_bunks / (subj.units_per_class || 1)))} sessions
+                                  <span className="text-[9.5px] block text-zinc-450 font-normal">({Math.max(0, subj.current_safe_bunks)} entries)</span>
+                                </div>
                                 <ArrowRight className="h-3 w-3 text-zinc-400" />
-                                <span className={subj.projected_safe_bunks < subj.current_safe_bunks ? "text-red-650" : "text-zinc-800"}>
-                                  {Math.floor(subj.projected_safe_bunks / (subj.units_per_class || 1))}
-                                </span>
+                                <div className={subj.projected_safe_bunks < subj.current_safe_bunks ? "text-red-650" : "text-zinc-800"}>
+                                  {Math.max(0, Math.floor(subj.projected_safe_bunks / (subj.units_per_class || 1)))} sessions
+                                  <span className="text-[9.5px] text-zinc-450 font-semibold block">({Math.max(0, subj.projected_safe_bunks)} entries)</span>
+                                </div>
                               </div>
                             </div>
 

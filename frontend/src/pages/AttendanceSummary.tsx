@@ -81,30 +81,18 @@ const AttendanceSummary: React.FC = () => {
                 </div>
 
                 {/* Substats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-6 pt-2">
+                <div className="grid grid-cols-3 gap-6 pt-2">
                   <div className="space-y-1">
-                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Total Lectures</span>
-                    <span className="block text-xl font-bold text-zinc-800">{overall.total_lectures}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Conducted</span>
+                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Delivered</span>
                     <span className="block text-xl font-bold text-zinc-800">{overall.conducted}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[11px] text-emerald-600 font-semibold uppercase tracking-wider block">Present</span>
+                    <span className="text-[11px] text-emerald-600 font-semibold uppercase tracking-wider block">Attended</span>
                     <span className="block text-xl font-bold text-emerald-600">{overall.attended}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[11px] text-red-600 font-semibold uppercase tracking-wider block">Absent</span>
+                    <span className="text-[11px] text-red-650 font-semibold uppercase tracking-wider block">Missed</span>
                     <span className="block text-xl font-bold text-red-650">{overall.absent}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Cancelled</span>
-                    <span className="block text-xl font-bold text-zinc-800">{overall.cancelled}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider block">Unmarked</span>
-                    <span className="block text-xl font-bold text-zinc-800">{overall.unmarked}</span>
                   </div>
                 </div>
 
@@ -115,7 +103,7 @@ const AttendanceSummary: React.FC = () => {
                     <span className="font-semibold text-zinc-500">Remaining Safe Absences (Semester Overall)</span>
                   </div>
                   <span className="text-sm font-extrabold text-zinc-800">
-                    {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes
+                    {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes ({subjects.reduce((sum, s) => sum + s.safe_bunks, 0)} entries)
                   </span>
                 </div>
               </div>
@@ -158,7 +146,7 @@ const AttendanceSummary: React.FC = () => {
                     }
 
                     return (
-                      <div key={subj.subject_id} className="premium-card p-6 flex flex-col justify-between gap-5">
+                      <div key={subj.subject_id} className="premium-card p-6 flex flex-col justify-between gap-5 animate-scale-in">
                         
                         {/* Title and Code */}
                         <div className="flex justify-between items-start">
@@ -192,39 +180,35 @@ const AttendanceSummary: React.FC = () => {
                         </div>
 
                         {/* Sub-counts */}
-                        <div className="grid grid-cols-4 gap-2 text-center text-[10px] text-zinc-500 py-1.5 bg-zinc-50/50 rounded-xl border border-zinc-200/50">
+                        <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-zinc-500 py-1.5 bg-zinc-50/50 rounded-xl border border-zinc-200/50 animate-scale-in">
                           <div>
-                            <span className="block font-bold text-zinc-800">{subj.attended}</span>
-                            <span>Present</span>
+                            <span className="block font-bold text-zinc-850">{subj.conducted}</span>
+                            <span>Delivered</span>
                           </div>
                           <div>
-                            <span className="block font-bold text-zinc-800">{subj.absent}</span>
-                            <span>Absent</span>
+                            <span className="block font-bold text-emerald-600">{subj.attended}</span>
+                            <span>Attended</span>
                           </div>
                           <div>
-                            <span className="block font-bold text-zinc-800">{subj.cancelled}</span>
-                            <span>Cancelled</span>
-                          </div>
-                          <div>
-                            <span className="block font-bold text-zinc-800">{subj.unmarked}</span>
-                            <span>Unmarked</span>
+                            <span className="block font-bold text-red-650">{subj.absent}</span>
+                            <span>Missed</span>
                           </div>
                         </div>
 
                         {/* Safe Absence calculation notification */}
                         <div className="text-xs pt-1.5 border-t border-zinc-100">
                           {isBelow ? (
-                            <div className="text-red-700 font-bold bg-red-50/60 border border-red-100 rounded-xl p-3 flex items-start space-x-2">
+                            <div className="text-red-700 font-bold bg-red-50/60 border border-red-100 rounded-xl p-3 flex items-start space-x-2 animate-scale-in">
                               <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5 text-red-500" />
                               <span className="leading-normal">
                                 Below threshold! You must attend the next <strong className="font-extrabold underline">{Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))}</strong> {Math.ceil(subj.required_to_attend / (subj.units_per_class || 1)) === 1 ? "class" : "classes"} consecutively to recover.
                               </span>
                             </div>
                           ) : (
-                            <div className="text-zinc-500 font-bold bg-zinc-50/50 border border-zinc-200 rounded-xl p-3 flex items-start space-x-2">
+                            <div className="text-zinc-500 font-bold bg-zinc-50/50 border border-zinc-200 rounded-xl p-3 flex items-start space-x-2 animate-scale-in">
                               <BookOpen className="h-4.5 w-4.5 shrink-0 mt-0.5 text-zinc-400" />
                               <span className="leading-normal">
-                                Attendance Margin: You can safely miss <strong className="font-extrabold text-zinc-800">{Math.floor(subj.safe_bunks / (subj.units_per_class || 1))}</strong> more {Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"}.
+                                Attendance Margin: You can safely miss <strong className="font-extrabold text-zinc-800">{Math.floor(subj.safe_bunks / (subj.units_per_class || 1))} lecture sessions</strong> ({subj.safe_bunks} attendance entries).
                               </span>
                             </div>
                           )}

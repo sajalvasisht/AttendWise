@@ -56,6 +56,8 @@ class Subject(Base):
     initial_conducted = Column(Integer, default=None, nullable=True)
     initial_attended = Column(Integer, default=None, nullable=True)
     track_attendance = Column(Boolean, default=True, nullable=False)
+    active_from = Column(Date, nullable=True)
+    active_until = Column(Date, nullable=True)
 
     semester = relationship("Semester", back_populates="subjects")
     timetable_slots = relationship("TimetableSlot", back_populates="subject", cascade="all, delete-orphan")
@@ -71,6 +73,7 @@ class TimetableSlot(Base):
     day_of_week = Column(Integer, nullable=False)  # 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
+    room = Column(String, nullable=True)
 
     semester = relationship("Semester", back_populates="timetable_slots")
     subject = relationship("Subject", back_populates="timetable_slots")
@@ -107,6 +110,7 @@ class LectureOccurrence(Base):
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     attendance_status = Column(String, default="unmarked", nullable=False)  # "present", "absent", "cancelled", "unmarked"
+    room = Column(String, nullable=True)
 
     semester = relationship("Semester", back_populates="lecture_occurrences")
     subject = relationship("Subject", back_populates="lecture_occurrences")

@@ -9,7 +9,7 @@ import { timetableService } from "../services/timetable";
 import { calendarService } from "../services/calendar";
 import { aiService } from "../services/ai";
 import { 
-  Plus, Trash2, Clock, AlertCircle, ArrowRight, Check, Loader2
+  Plus, Trash2, Clock, AlertCircle, ArrowRight, Check, Loader2, Edit3
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { AttendWiseLogo } from "../components/AttendWiseLogo";
@@ -54,14 +54,26 @@ const SetupWizard: React.FC = () => {
   const [subjCode, setSubjCode] = useState("");
   const [subjFaculty, setSubjFaculty] = useState("");
   const [subjMinAtt, setSubjMinAtt] = useState<number | "">(75);
-  const [subjUnitsPerClass, setSubjUnitsPerClass] = useState<number | "custom">(1);
+  const [subjUnitsPerClass, setSubjUnitsPerClass] = useState<number | "custom">(2);
   const [customUnits, setCustomUnits] = useState<number>(3);
+  const [subjTrackAttendance, setSubjTrackAttendance] = useState(true);
 
   // Step 4: Timetable Input Form
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedSubjId, setSelectedSubjId] = useState<number | "">("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
+  const [room, setRoom] = useState("");
+
+  // Edit slot states
+  const [editingSlotIdx, setEditingSlotIdx] = useState<number | null>(null);
+  const [editSlotSubjId, setEditSlotSubjId] = useState<number>(0);
+  const [editSlotDay, setEditSlotDay] = useState<number>(0);
+  const [editSlotStart, setEditSlotStart] = useState<string>("");
+  const [editSlotEnd, setEditSlotEnd] = useState<string>("");
+  const [editSlotRoom, setEditSlotRoom] = useState<string>("");
+  const [editSlotFaculty, setEditSlotFaculty] = useState<string>("");
+  const [editSlotEntries, setEditSlotEntries] = useState<number>(2);
 
   // Step 5: Calendar Event Form
   const [eventDate, setEventDate] = useState("");
@@ -349,13 +361,17 @@ const SetupWizard: React.FC = () => {
             cs.name.toLowerCase() === slot.subject_name.toLowerCase() ||
             (slot.subject_code && cs.code && cs.code.toLowerCase() === slot.subject_code.toLowerCase())
           );
+          if (matched && matched.name.toLowerCase().includes("sts")) {
+            return null; // Skip STS slots!
+          }
           return {
             subject_id: matched ? matched.id : 0,
             day_of_week: slot.day_of_week,
             start_time: slot.start_time.length === 5 ? `${slot.start_time}:00` : slot.start_time,
-            end_time: slot.end_time.length === 5 ? `${slot.end_time}:00` : slot.end_time
+            end_time: slot.end_time.length === 5 ? `${slot.end_time}:00` : slot.end_time,
+            room: (slot as any).room || undefined
           };
-        }).filter(s => s.subject_id !== 0);
+        }).filter(s => s !== null && s.subject_id !== 0);
 
         setTimetableSlots(mappedSlots);
         
@@ -386,6 +402,7 @@ const SetupWizard: React.FC = () => {
         faculty: subjFaculty || undefined,
         min_attendance_percent: subjMinAtt === "" ? 75 : Number(subjMinAtt),
         units_per_class: subjUnitsPerClass === "custom" ? customUnits : subjUnitsPerClass,
+        track_attendance: subjTrackAttendance,
       });
       setSubjects([...subjects, added]);
       
@@ -393,8 +410,9 @@ const SetupWizard: React.FC = () => {
       setSubjCode("");
       setSubjFaculty("");
       setSubjMinAtt(75);
-      setSubjUnitsPerClass(1);
+      setSubjUnitsPerClass(2);
       setCustomUnits(3);
+      setSubjTrackAttendance(true);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to add subject.");
     } finally {
@@ -458,9 +476,51 @@ const SetupWizard: React.FC = () => {
       day_of_week: selectedDay,
       start_time: startTime.length === 5 ? `${startTime}:00` : startTime,
       end_time: endTime.length === 5 ? `${endTime}:00` : endTime,
+      room: room.trim() || undefined,
     };
 
     setTimetableSlots([...timetableSlots, newSlot]);
+    setRoom("");
+  };
+
+  const handleStartEditSlot = (idx: number) => {
+    const slot = timetableSlots[idx];
+    const subj = subjects.find(s => s.id === slot.subject_id);
+    setEditingSlotIdx(idx);
+    setEditSlotSubjId(slot.subject_id);
+    setEditSlotDay(slot.day_of_week);
+    setEditSlotStart(slot.start_time.slice(0, 5));
+    setEditSlotEnd(slot.end_time.slice(0, 5));
+    setEditSlotRoom(slot.room || "");
+    setEditSlotFaculty(subj ? subj.faculty || "" : "");
+    setEditSlotEntries(subj ? subj.units_per_class : 2);
+  };
+
+  const handleSaveEditSlot = async (idx: number) => {
+    const updatedSlots = [...timetableSlots];
+    updatedSlots[idx] = {
+      subject_id: editSlotSubjId,
+      day_of_week: editSlotDay,
+      start_time: editSlotStart.length === 5 ? `${editSlotStart}:00` : editSlotStart,
+      end_time: editSlotEnd.length === 5 ? `${editSlotEnd}:00` : editSlotEnd,
+      room: editSlotRoom.trim() || undefined
+    };
+    setTimetableSlots(updatedSlots);
+
+    const subject = subjects.find(s => s.id === editSlotSubjId);
+    if (subject && semester && (subject.faculty !== editSlotFaculty || subject.units_per_class !== editSlotEntries)) {
+      try {
+        const updatedSubj = await subjectService.update(semester.id, editSlotSubjId, {
+          faculty: editSlotFaculty.trim() || undefined,
+          units_per_class: editSlotEntries
+        });
+        setSubjects(prev => prev.map(s => s.id === editSlotSubjId ? updatedSubj : s));
+      } catch (err) {
+        console.error("Failed to update subject metadata on slot edit:", err);
+      }
+    }
+
+    setEditingSlotIdx(null);
   };
 
   // Step 4: Remove Timetable Slot
@@ -521,7 +581,8 @@ const SetupWizard: React.FC = () => {
         subject_id: slot.subject_id,
         day_of_week: slot.day_of_week,
         start_time: slot.start_time,
-        end_time: slot.end_time
+        end_time: slot.end_time,
+        room: slot.room
       })));
 
       // Save calendar events in batch
@@ -883,10 +944,11 @@ const SetupWizard: React.FC = () => {
                         const val = e.target.value;
                         setSubjName(val);
                         const valLower = val.toLowerCase();
-                        if (valLower.includes("lab") || valLower.includes("2-hour") || valLower.includes("2 hour") || valLower.includes("2hr")) {
-                          setSubjUnitsPerClass(2);
+                        if (valLower.includes("sts")) {
+                          setSubjTrackAttendance(false);
                         } else {
-                          setSubjUnitsPerClass(1);
+                          setSubjTrackAttendance(true);
+                          setSubjUnitsPerClass(2);
                         }
                       }}
                       className="block w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
@@ -963,6 +1025,20 @@ const SetupWizard: React.FC = () => {
                       <option value="2">2 (e.g. 2-hour Lab)</option>
                       <option value="custom">Custom Value</option>
                     </select>
+                  </div>
+
+                  {/* Track Attendance Toggle */}
+                  <div className="space-y-1.5 flex items-center space-x-3 pt-3 animate-scale-in">
+                    <input
+                      type="checkbox"
+                      id="subj_track_attendance"
+                      checked={subjTrackAttendance}
+                      onChange={(e) => setSubjTrackAttendance(e.target.checked)}
+                      className="h-4 w-4 rounded border-border text-foreground focus:ring-foreground/5 cursor-pointer"
+                    />
+                    <label htmlFor="subj_track_attendance" className="text-xs font-semibold text-foreground cursor-pointer select-none">
+                      Track Attendance for this subject
+                    </label>
                   </div>
 
                   {subjUnitsPerClass === "custom" && (
@@ -1058,7 +1134,7 @@ const SetupWizard: React.FC = () => {
               </div>
 
               <form onSubmit={handleAddSlot} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                   
                   {/* Select Weekday */}
                   <div className="space-y-1.5">
@@ -1088,6 +1164,18 @@ const SetupWizard: React.FC = () => {
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Room */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Room</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Room 301"
+                      value={room}
+                      onChange={(e) => setRoom(e.target.value)}
+                      className="block w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-foreground/20 focus:ring-1 focus:ring-foreground/5"
+                    />
                   </div>
 
                   {/* Start Time */}
@@ -1138,22 +1226,162 @@ const SetupWizard: React.FC = () => {
                 <div className="divide-y divide-border/60">
                   {timetableSlots.map((slot, idx) => {
                     const subject = subjects.find((s) => s.id === slot.subject_id);
+                    const isEditing = editingSlotIdx === idx;
+                    
+                    if (isEditing) {
+                      return (
+                        <div key={idx} className="py-3 space-y-3 bg-[#fafafa] p-4 rounded-xl border border-zinc-150 text-xs animate-scale-in">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {/* Weekday */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-zinc-400 uppercase">Day</label>
+                              <select
+                                value={editSlotDay}
+                                onChange={(e) => setEditSlotDay(Number(e.target.value))}
+                                className="block w-full rounded-lg border border-border bg-background py-1.5 px-2.5 text-xs text-foreground outline-none"
+                              >
+                                {DAYS_OF_WEEK.map((day, dIdx) => (
+                                  <option key={dIdx} value={dIdx}>{day}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Subject */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-zinc-400 uppercase">Subject</label>
+                              <select
+                                value={editSlotSubjId}
+                                onChange={(e) => setEditSlotSubjId(Number(e.target.value))}
+                                className="block w-full rounded-lg border border-border bg-background py-1.5 px-2.5 text-xs text-foreground outline-none"
+                              >
+                                {subjects.map((s) => (
+                                  <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Room */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-zinc-400 uppercase">Room</label>
+                              <input
+                                type="text"
+                                value={editSlotRoom}
+                                onChange={(e) => setEditSlotRoom(e.target.value)}
+                                className="block w-full rounded-lg border border-border bg-background py-1.5 px-2.5 text-xs text-foreground outline-none animate-scale-in"
+                                placeholder="e.g. Room 301"
+                              />
+                            </div>
+
+                            {/* Faculty */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-zinc-400 uppercase">Faculty</label>
+                              <input
+                                type="text"
+                                value={editSlotFaculty}
+                                onChange={(e) => setEditSlotFaculty(e.target.value)}
+                                className="block w-full rounded-lg border border-border bg-background py-1.5 px-2.5 text-xs text-foreground outline-none animate-scale-in"
+                                placeholder="e.g. Dr. Smith"
+                              />
+                            </div>
+
+                            {/* Start Time */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-zinc-400 uppercase">Start Time</label>
+                              <input
+                                type="time"
+                                value={editSlotStart}
+                                onChange={(e) => setEditSlotStart(e.target.value)}
+                                className="block w-full rounded-lg border border-border bg-background py-1.5 px-2.5 text-xs text-foreground outline-none animate-scale-in"
+                              />
+                            </div>
+
+                            {/* End Time */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-zinc-400 uppercase">End Time</label>
+                              <input
+                                type="time"
+                                value={editSlotEnd}
+                                onChange={(e) => setEditSlotEnd(e.target.value)}
+                                className="block w-full rounded-lg border border-border bg-background py-1.5 px-2.5 text-xs text-foreground outline-none animate-scale-in"
+                              />
+                            </div>
+
+                            {/* Entries */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-zinc-400 uppercase">Entries Per Class</label>
+                              <select
+                                value={editSlotEntries}
+                                onChange={(e) => setEditSlotEntries(Number(e.target.value))}
+                                className="block w-full rounded-lg border border-border bg-background py-1.5 px-2.5 text-xs text-foreground outline-none animate-scale-in"
+                              >
+                                <option value={1}>1 entry</option>
+                                <option value={2}>2 entries</option>
+                                <option value={3}>3 entries</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2 pt-1.5 border-t border-zinc-150">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditSlot(idx)}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer transition-colors"
+                            >
+                              Save Row
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingSlotIdx(null)}
+                              className="px-3 py-1 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 rounded text-[10px] font-bold cursor-pointer transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
-                      <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center space-x-4">
+                      <div key={idx} className="py-2.5 flex items-center justify-between text-xs border-b border-border/60 last:border-b-0 animate-scale-in">
+                        <div className="flex flex-wrap items-center gap-3">
                           <span className="font-semibold text-foreground w-20">{DAYS_OF_WEEK[slot.day_of_week]}</span>
                           <span className="text-muted-foreground flex items-center space-x-1">
                             <Clock className="h-3.5 w-3.5 mr-1 shrink-0" />
                             {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
                           </span>
                           <span className="font-medium text-foreground">{subject ? subject.name : "Unknown Subject"}</span>
+                          {slot.room && (
+                            <span className="text-[9.5px] bg-zinc-100 text-zinc-650 px-2 py-0.5 rounded font-medium border border-zinc-200">
+                              Room: {slot.room}
+                            </span>
+                          )}
+                          {subject?.faculty && (
+                            <span className="text-[9.5px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium border border-blue-100">
+                              Faculty: {subject.faculty}
+                            </span>
+                          )}
+                          {subject && (
+                            <span className="text-[9.5px] bg-zinc-100 text-zinc-650 px-2 py-0.5 rounded font-medium border border-zinc-250">
+                              Value: {subject.units_per_class} entries
+                            </span>
+                          )}
                         </div>
-                        <button
-                          onClick={() => handleRemoveSlot(idx)}
-                          className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-muted cursor-pointer transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditSlot(idx)}
+                            className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-muted cursor-pointer transition-colors"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSlot(idx)}
+                            className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-muted cursor-pointer transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

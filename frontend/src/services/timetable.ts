@@ -7,6 +7,7 @@ export interface TimetableSlot {
   day_of_week: number; // 0=Monday, 6=Sunday
   start_time: string; // "HH:MM:SS" or "HH:MM"
   end_time: string;
+  room?: string;
 }
 
 export const timetableService = {

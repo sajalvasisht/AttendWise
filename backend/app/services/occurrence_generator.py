@@ -95,6 +95,12 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
             for slot in day_slots:
                 if slot.subject and not slot.subject.track_attendance:
                     continue
+                # Apply active date ranges check
+                if slot.subject:
+                    s_start = slot.subject.active_from or semester.start_date
+                    s_end = slot.subject.active_until or semester.end_date
+                    if not (s_start <= current_date <= s_end):
+                        continue
                 key = (slot.subject_id, current_date, slot.start_time, slot.end_time)
                 if key not in marked_keys:
                     new_occurrences.append(
@@ -104,7 +110,8 @@ def generate_occurrences(db: Session, semester_id: int, start_from_date: Optiona
                             date=current_date,
                             start_time=slot.start_time,
                             end_time=slot.end_time,
-                            attendance_status="unmarked"
+                            attendance_status="unmarked",
+                            room=slot.room
                         )
                     )
 

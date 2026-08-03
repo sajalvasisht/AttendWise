@@ -79,3 +79,43 @@ def test_attendance_initialized_state(db_session):
     # safe_bunks = floor(10 - 0.75 * 12) = floor(10 - 9) = 1
     assert stats2["safe_bunks"] == 1
     assert stats2["attendance_percent"] == 83.33
+
+def test_sync_subject_past_occurrences(db_session):
+    from app.services.attendance_engine import sync_subject_past_occurrences
+    from app.models.models import TimetableSlot
+    from datetime import timedelta
+    
+    user = User(email="tester@gmail.com", password_hash=get_password_hash("test"), full_name="Tester")
+    db_session.add(user)
+    db_session.commit()
+
+    start = date.today() - timedelta(days=5)
+    end = date.today() + timedelta(days=5)
+    semester = Semester(user_id=user.id, name="Spring 2026", start_date=start, end_date=end, working_days="0,1,2,3,4,5,6")
+    db_session.add(semester)
+    db_session.commit()
+
+    subject = Subject(semester_id=semester.id, name="Maths", code="MATH101", min_attendance_percent=75.0)
+    db_session.add(subject)
+    db_session.commit()
+
+    for day in range(7):
+        slot = TimetableSlot(semester_id=semester.id, subject_id=subject.id, day_of_week=day, start_time=time(9,0), end_time=time(10,0))
+        db_session.add(slot)
+    db_session.commit()
+
+    sync_subject_past_occurrences(db_session, semester.id, subject.id, attended=4, missed=1)
+
+    occurrences = db_session.query(LectureOccurrence).filter(
+        LectureOccurrence.subject_id == subject.id,
+        LectureOccurrence.date < date.today()
+    ).all()
+    
+    assert len(occurrences) >= 5
+    presents = [occ for occ in occurrences if occ.attendance_status == "present"]
+    absents = [occ for occ in occurrences if occ.attendance_status == "absent"]
+    assert len(presents) == 4
+    assert len(absents) == 1
+    assert subject.initial_conducted == 0
+    assert subject.initial_attended == 0
+

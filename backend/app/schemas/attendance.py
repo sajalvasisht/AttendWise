@@ -12,6 +12,7 @@ class LectureOccurrenceResponse(BaseModel):
     end_time: time
     attendance_status: str
     subject: SubjectResponse
+    room: Optional[str] = None
 
     class Config:
         from_attributes = True

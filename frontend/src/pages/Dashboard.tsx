@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
   Loader2, AlertCircle, Clock, Brain, Trash2, 
-  Upload, CalendarDays, RefreshCw, ChevronRight
+  Upload, CalendarDays, RefreshCw, ChevronRight, Edit3
 } from "lucide-react";
 import { semesterService } from "../services/semester";
 import type { Semester } from "../services/semester";
@@ -12,6 +12,7 @@ import { calendarService } from "../services/calendar";
 import type { CalendarEvent } from "../services/calendar";
 import { aiService } from "../services/ai";
 import { timetableService } from "../services/timetable";
+import { subjectService } from "../services/subject";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../hooks/useAuth";
 
@@ -30,6 +31,12 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
+  // Subject Attendance Edit states
+  const [editingSubj, setEditingSubj] = useState<SubjectAttendanceStats | null>(null);
+  const [editAttended, setEditAttended] = useState<number>(0);
+  const [editMissed, setEditMissed] = useState<number>(0);
+  const [savingSync, setSavingSync] = useState(false);
+
   // Quick Action Modal states
   const [activeModal, setActiveModal] = useState<"none" | "restart" | "replace_timetable" | "replace_calendar">("none");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -45,6 +52,30 @@ const Dashboard: React.FC = () => {
     if (hour < 12) return "Good Morning";
     if (hour < 17) return "Good Afternoon";
     return "Good Evening";
+  };
+
+  const handleOpenEditAttendance = (subj: SubjectAttendanceStats) => {
+    setEditingSubj(subj);
+    setEditAttended(subj.attended);
+    setEditMissed(subj.absent);
+  };
+
+  const handleSaveAttendanceEdit = async () => {
+    if (!editingSubj || !semester) return;
+    setSavingSync(true);
+    try {
+      await subjectService.syncAttendance(semester.id, editingSubj.subject_id, {
+        attended: editAttended,
+        missed: editMissed,
+        delivered: editAttended + editMissed
+      });
+      setEditingSubj(null);
+      await fetchDashboardData();
+    } catch (err) {
+      console.error("Failed to sync attendance edit", err);
+    } finally {
+      setSavingSync(false);
+    }
   };
 
   const fetchDashboardData = async () => {
@@ -540,34 +571,22 @@ const Dashboard: React.FC = () => {
                         const isWarning = !isBelow && subj.safe_bunks === 0;
                         
                         let textClass = "text-emerald-600";
-                        let barClass = "bg-emerald-500";
-                        let badgeClass = "bg-emerald-50 border-emerald-100 text-emerald-700";
                         if (isBelow) {
                           textClass = "text-red-650";
-                          barClass = "bg-red-500";
-                          badgeClass = "bg-red-50 border-red-100 text-red-700";
                         } else if (isWarning) {
                           textClass = "text-amber-600";
-                          barClass = "bg-amber-500";
-                          badgeClass = "bg-amber-50 border-amber-100 text-amber-700";
                         }
-
-                        const insight = isBelow 
-                          ? `Attend next ${Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))} classes`
-                          : isWarning
-                            ? "Cannot miss any class"
-                            : `Can safely miss ${Math.floor(subj.safe_bunks / (subj.units_per_class || 1))} ${Math.floor(subj.safe_bunks / (subj.units_per_class || 1)) === 1 ? "class" : "classes"}`;
 
                         return (
                           <div 
                             key={subj.subject_id} 
-                            className="premium-card p-5 flex flex-col justify-between gap-4"
+                            className="premium-card p-5 flex flex-col justify-between gap-4 animate-scale-in"
                           >
                             <div className="flex justify-between items-start gap-3">
                               <div className="min-w-0">
                                 <h4 className="text-sm font-bold text-zinc-800 truncate">{subj.name}</h4>
                                 {subj.code && (
-                                  <span className="text-[9px] text-zinc-400 font-mono uppercase tracking-wide mt-0.5 block">
+                                  <span className="text-[9px] text-zinc-450 font-mono uppercase tracking-wide mt-0.5 block">
                                     {subj.code}
                                   </span>
                                 )}
@@ -582,25 +601,44 @@ const Dashboard: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* 12px Progress bar visualization */}
-                            <div className="space-y-1 pt-1">
-                              <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full ${barClass} rounded-full transition-all duration-500`} 
-                                  style={{ width: `${Math.min(100, subj.attendance_percent)}%` }} 
-                                />
+                            {/* Subject Stats Grid */}
+                            <div className="grid grid-cols-3 gap-2 py-2 text-center bg-zinc-50/50 rounded-xl border border-zinc-100">
+                              <div>
+                                <span className="text-[9.5px] text-zinc-400 font-extrabold uppercase tracking-wide block">Delivered</span>
+                                <span className="text-xs font-black text-zinc-700">{subj.conducted}</span>
                               </div>
-                              <div className="flex justify-between text-[8px] text-zinc-450 font-bold font-mono">
-                                <span>0%</span>
-                                <span>100%</span>
+                              <div>
+                                <span className="text-[9.5px] text-zinc-400 font-extrabold uppercase tracking-wide block">Attended</span>
+                                <span className="text-xs font-black text-zinc-700">{subj.attended}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9.5px] text-zinc-400 font-extrabold uppercase tracking-wide block">Missed</span>
+                                <span className="text-xs font-black text-zinc-750">{subj.absent}</span>
                               </div>
                             </div>
 
-                            <div className="pt-3 border-t border-zinc-100 flex items-center justify-between text-[11px] font-semibold">
-                              <span className="text-zinc-450 font-bold">Standing Status:</span>
-                              <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-extrabold ${badgeClass}`}>
-                                {insight}
-                              </span>
+                            {/* Safe Leave Allowance bottom section */}
+                            <div className="pt-3.5 border-t border-zinc-100/80 flex items-end justify-between">
+                              <div className="space-y-0.5">
+                                <span className="text-[9px] text-zinc-400 font-extrabold uppercase tracking-wider block">Safe Leave Allowance</span>
+                                {isBelow ? (
+                                  <p className="text-[10.5px] font-bold text-red-650 leading-relaxed">
+                                    Below target! Attend <span className="font-extrabold underline">{Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))} classes</span> to recover.
+                                  </p>
+                                ) : (
+                                  <div className="text-[10.5px] font-bold text-zinc-800 leading-normal">
+                                    You can safely miss <span className="font-extrabold text-zinc-950 underline">{Math.max(0, Math.floor(subj.safe_bunks / (subj.units_per_class || 1)))} classes</span>
+                                    <span className="text-zinc-400 font-medium block mt-0.5">({Math.max(0, subj.safe_bunks)} attendance entries)</span>
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleOpenEditAttendance(subj)}
+                                className="p-1.5 rounded-lg border border-zinc-200 text-zinc-450 hover:text-zinc-800 hover:bg-zinc-50 transition-all cursor-pointer"
+                                title="Quick Edit Attendance"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
                             </div>
                           </div>
                         );
@@ -704,6 +742,103 @@ const Dashboard: React.FC = () => {
         )}
 
       </main>
+
+      {/* Edit Attendance Modal Overlay */}
+      {editingSubj && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/20 backdrop-blur-[3px] p-6 animate-fade-in">
+          <div className="bg-white rounded-[28px] border border-zinc-200/50 max-w-sm w-full p-8 shadow-[0_20px_50px_rgba(15,23,42,0.12)] space-y-6 animate-scale-in">
+            <div className="space-y-1">
+              <h3 className="text-base font-black text-zinc-900 leading-tight">
+                Edit Attendance
+              </h3>
+              <p className="text-xs text-zinc-400 font-medium">
+                {editingSubj.name} ({editingSubj.code || "N/A"})
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Attended Input */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Attended Sessions</label>
+                <div className="flex items-center space-x-3">
+                  <button 
+                    type="button"
+                    onClick={() => setEditAttended(prev => Math.max(0, prev - 1))}
+                    className="h-9 w-9 rounded-xl border border-zinc-200 flex items-center justify-center font-bold text-zinc-650 hover:bg-zinc-50 transition-colors select-none animate-press"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editAttended}
+                    onChange={(e) => setEditAttended(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="block flex-1 text-center h-9 rounded-xl border border-zinc-200 outline-none text-xs font-bold text-zinc-800"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setEditAttended(prev => prev + 1)}
+                    className="h-9 w-9 rounded-xl border border-zinc-200 flex items-center justify-center font-bold text-zinc-650 hover:bg-zinc-50 transition-colors select-none animate-press"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Missed Input */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Missed Sessions</label>
+                <div className="flex items-center space-x-3">
+                  <button 
+                    type="button"
+                    onClick={() => setEditMissed(prev => Math.max(0, prev - 1))}
+                    className="h-9 w-9 rounded-xl border border-zinc-200 flex items-center justify-center font-bold text-zinc-650 hover:bg-zinc-550 hover:bg-zinc-50 transition-colors select-none animate-press"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editMissed}
+                    onChange={(e) => setEditMissed(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="block flex-1 text-center h-9 rounded-xl border border-zinc-200 outline-none text-xs font-bold text-zinc-800"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setEditMissed(prev => prev + 1)}
+                    className="h-9 w-9 rounded-xl border border-zinc-200 flex items-center justify-center font-bold text-zinc-650 hover:bg-zinc-550 hover:bg-zinc-50 transition-colors select-none animate-press"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Delivered Summary block */}
+              <div className="bg-[#fafafa] rounded-2xl p-4 border border-zinc-100 flex items-center justify-between text-xs">
+                <span className="text-zinc-400 font-bold">Total Delivered:</span>
+                <span className="text-zinc-800 font-black">{editAttended + editMissed} sessions</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button 
+                onClick={() => setEditingSubj(null)} 
+                disabled={savingSync}
+                className="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-all cursor-pointer disabled:opacity-50 select-none"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveAttendanceEdit} 
+                disabled={savingSync}
+                className="rounded-xl bg-zinc-900 text-white px-4 py-2.5 text-xs font-bold hover:bg-zinc-800 transition-all cursor-pointer shadow-sm disabled:opacity-50 select-none animate-press"
+              >
+                {savingSync ? "Recalculating..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4. MODALS & POPUPS */}
       {activeModal !== "none" && (

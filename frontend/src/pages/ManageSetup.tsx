@@ -86,12 +86,15 @@ const ManageSetup: React.FC = () => {
   const [newSubjUnitsPerClass, setNewSubjUnitsPerClass] = useState<number | "custom">(1);
   const [customUnits, setCustomUnits] = useState(3);
   const [newSubjTrackAttendance, setNewSubjTrackAttendance] = useState(true);
+  const [newSubjActiveFrom, setNewSubjActiveFrom] = useState("");
+  const [newSubjActiveUntil, setNewSubjActiveUntil] = useState("");
 
   // Timetable form states (For adding)
   const [newSlotDay, setNewSlotDay] = useState(0);
   const [newSlotSubjId, setNewSlotSubjId] = useState<number | "">("");
   const [newSlotStart, setNewSlotStart] = useState("09:00");
   const [newSlotEnd, setNewSlotEnd] = useState("10:00");
+  const [newSlotRoom, setNewSlotRoom] = useState("");
 
   // Calendar event form states (For adding)
   const [newEventDate, setNewEventDate] = useState("");
@@ -189,6 +192,8 @@ const ManageSetup: React.FC = () => {
         min_attendance_percent: newSubjMinAtt,
         units_per_class: finalUnits,
         track_attendance: newSubjTrackAttendance,
+        active_from: newSubjActiveFrom || undefined,
+        active_until: newSubjActiveUntil || undefined,
       });
       setSuccess("Subject added successfully.");
       setTimeout(() => setSuccess(null), 3000);
@@ -199,6 +204,8 @@ const ManageSetup: React.FC = () => {
       setNewSubjUnitsPerClass(1);
       setCustomUnits(3);
       setNewSubjTrackAttendance(true);
+      setNewSubjActiveFrom("");
+      setNewSubjActiveUntil("");
       await loadSemesterDetails();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to add subject.");
@@ -259,10 +266,12 @@ const ManageSetup: React.FC = () => {
         day_of_week: newSlotDay,
         start_time: newSlotStart,
         end_time: newSlotEnd,
+        room: newSlotRoom.trim() || undefined
       }], "merge");
       setSuccess("Timetable slot added successfully.");
       setTimeout(() => setSuccess(null), 3000);
       setNewSlotSubjId("");
+      setNewSlotRoom("");
       await loadSemesterDetails();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to add timetable slot.");
@@ -283,6 +292,7 @@ const ManageSetup: React.FC = () => {
           day_of_week: s.day_of_week,
           start_time: s.start_time,
           end_time: s.end_time,
+          room: s.room
         }));
       await timetableService.save(activeSem.id, filtered, "replace");
       setSuccess("Timetable slot deleted successfully.");
@@ -813,6 +823,26 @@ const ManageSetup: React.FC = () => {
                     Track Attendance for this subject
                   </label>
                 </div>
+
+                {/* Active From and Active Until Dates */}
+                <div className="space-y-1.5 animate-scale-in">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Active From</label>
+                  <input
+                    type="date"
+                    value={newSubjActiveFrom}
+                    onChange={(e) => setNewSubjActiveFrom(e.target.value)}
+                    className="block w-full rounded-xl py-2 px-3 text-xs text-zinc-800 font-semibold bg-[#fafafa] border border-zinc-200 outline-none cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-1.5 animate-scale-in">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Active Until (Optional)</label>
+                  <input
+                    type="date"
+                    value={newSubjActiveUntil}
+                    onChange={(e) => setNewSubjActiveUntil(e.target.value)}
+                    className="block w-full rounded-xl py-2 px-3 text-xs text-zinc-800 font-semibold bg-[#fafafa] border border-zinc-200 outline-none cursor-pointer"
+                  />
+                </div>
               </div>
 
               <div className="border-t border-zinc-100 pt-5 flex justify-end">
@@ -927,7 +957,14 @@ const ManageSetup: React.FC = () => {
                                       </span>
                                     )}
                                   </div>
-                                  <span className="text-[10.5px] text-zinc-450 font-bold block mt-1">{slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}</span>
+                                  <span className="text-[10.5px] text-zinc-450 font-bold block mt-1">
+                                    {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                                    {slot.room && (
+                                      <span className="ml-2 px-1.5 py-0.5 rounded bg-zinc-150 text-zinc-650 border border-zinc-200 text-[9px] font-bold">
+                                        Room: {slot.room}
+                                      </span>
+                                    )}
+                                  </span>
                                 </div>
                                 <button
                                   onClick={() => handleDeleteTimetableSlot(slot.id)}
@@ -953,7 +990,9 @@ const ManageSetup: React.FC = () => {
                 <span>Add Timetable Slot</span>
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                
+                {/* Select Weekday */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Weekday</label>
                   <select
@@ -966,6 +1005,8 @@ const ManageSetup: React.FC = () => {
                     ))}
                   </select>
                 </div>
+
+                {/* Select Subject */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Subject</label>
                   <select
@@ -979,6 +1020,18 @@ const ManageSetup: React.FC = () => {
                       <option key={s.id} value={s.id}>{s.name} {s.code ? `(${s.code})` : ""}</option>
                     ))}
                   </select>
+                </div>
+
+                {/* Room Location */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Room</label>
+                  <input
+                    type="text"
+                    value={newSlotRoom}
+                    onChange={(e) => setNewSlotRoom(e.target.value)}
+                    placeholder="e.g. Room 301"
+                    className="block w-full rounded-xl py-2 px-3.5 text-xs text-zinc-800 font-semibold bg-[#fafafa] border border-zinc-200 outline-none"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Start Time</label>

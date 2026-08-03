@@ -1,11 +1,13 @@
 from pydantic import BaseModel, Field
 from datetime import time
+from typing import Optional
 
 class TimetableSlotBase(BaseModel):
     subject_id: int
     day_of_week: int = Field(..., ge=0, le=6, description="0=Monday, 6=Sunday")
     start_time: time
     end_time: time
+    room: Optional[str] = None
 
 class TimetableSlotCreate(TimetableSlotBase):
     pass

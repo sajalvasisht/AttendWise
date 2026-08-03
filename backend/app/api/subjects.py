@@ -4,7 +4,7 @@ from typing import List, Any
 
 from app.database.session import get_db
 from app.models.models import Subject, Semester, User
-from app.schemas.subject import SubjectCreate, SubjectResponse, SubjectUpdate
+from app.schemas.subject import SubjectCreate, SubjectResponse, SubjectUpdate, SubjectAttendanceSyncRequest
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/semesters/{semester_id}/subjects", tags=["subjects"])
@@ -131,3 +131,35 @@ def delete_subject(
     db.delete(subject)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.put("/{subject_id}/sync-attendance", response_model=SubjectResponse)
+def sync_subject_attendance(
+    semester_id: int,
+    subject_id: int,
+    sync_in: SubjectAttendanceSyncRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    verify_active_semester(semester_id, current_user.id, db)
+    subject = db.query(Subject).filter(
+        Subject.id == subject_id,
+        Subject.semester_id == semester_id
+    ).first()
+    if not subject:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subject not found"
+        )
+    
+    from app.services.attendance_engine import sync_subject_past_occurrences
+    sync_subject_past_occurrences(
+        db, 
+        semester_id, 
+        subject.id, 
+        sync_in.attended, 
+        sync_in.missed
+    )
+    
+    db.refresh(subject)
+    return subject
+

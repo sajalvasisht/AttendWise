@@ -27,8 +27,11 @@ const Navbar: React.FC = () => {
         <div className="flex items-center space-x-8">
           <Link to="/dashboard" className="flex items-center space-x-2.5 group">
             <AttendWiseLogo size={30} bg="#0f172a" color="#ffffff" />
-            <span className="font-bold text-sm tracking-tight text-zinc-950">
+            <span className="font-bold text-sm tracking-tight text-zinc-950 flex items-center gap-1.5">
               AttendWise
+              <span className="text-[9px] bg-zinc-900 text-white font-black tracking-wider uppercase px-1.5 py-0.5 rounded-md leading-none select-none">
+                Beta v0.9
+              </span>
             </span>
           </Link>
 

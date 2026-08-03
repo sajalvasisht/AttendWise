@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import date
 
 class SubjectBase(BaseModel):
     name: str
@@ -10,6 +11,8 @@ class SubjectBase(BaseModel):
     units_earned_per_class: int = Field(default=1, ge=1)
     units_lost_per_class: int = Field(default=1, ge=1)
     track_attendance: bool = Field(default=True)
+    active_from: Optional[date] = None
+    active_until: Optional[date] = None
 
 class SubjectCreate(SubjectBase):
     track_attendance: Optional[bool] = None
@@ -23,6 +26,8 @@ class SubjectUpdate(BaseModel):
     units_earned_per_class: Optional[int] = Field(default=None, ge=1)
     units_lost_per_class: Optional[int] = Field(default=None, ge=1)
     track_attendance: Optional[bool] = None
+    active_from: Optional[date] = None
+    active_until: Optional[date] = None
 
 class SubjectResponse(SubjectBase):
     id: int
@@ -30,3 +35,8 @@ class SubjectResponse(SubjectBase):
 
     class Config:
         from_attributes = True
+
+class SubjectAttendanceSyncRequest(BaseModel):
+    attended: int = Field(..., ge=0)
+    missed: int = Field(..., ge=0)
+    delivered: int = Field(..., ge=0)

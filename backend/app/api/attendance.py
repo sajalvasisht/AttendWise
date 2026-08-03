@@ -184,6 +184,16 @@ def initialize_attendance(
         if subject:
             subject.initial_conducted = init.initial_conducted
             subject.initial_attended = init.initial_attended
+            db.commit()
+            
+            from app.services.attendance_engine import sync_subject_past_occurrences
+            sync_subject_past_occurrences(
+                db, 
+                semester_id, 
+                subject.id, 
+                init.initial_attended, 
+                max(0, init.initial_conducted - init.initial_attended)
+            )
             
     db.commit()
     return {"message": "Attendance successfully initialized"}
