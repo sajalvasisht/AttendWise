@@ -7,7 +7,8 @@ import {
 import { semesterService } from "../services/semester";
 import type { Semester } from "../services/semester";
 import { attendanceService } from "../services/attendance";
-import type { SubjectAttendanceStats, LectureOccurrence } from "../services/attendance";
+import type { OverallAttendanceStats, SubjectAttendanceStats, LectureOccurrence } from "../services/attendance";
+
 import { calendarService } from "../services/calendar";
 import type { CalendarEvent } from "../services/calendar";
 import { aiService } from "../services/ai";
@@ -26,7 +27,8 @@ const Dashboard: React.FC = () => {
   const [todayHoliday, setTodayHoliday] = useState<CalendarEvent | null>(null);
   const [upcomingAssessments, setUpcomingAssessments] = useState<CalendarEvent[]>([]);
   const [plannerSuggestions, setPlannerSuggestions] = useState<any[]>([]);
-  
+  const [overallStats, setOverallStats] = useState<OverallAttendanceStats | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -91,11 +93,14 @@ const Dashboard: React.FC = () => {
       setSemester(activeSem);
 
       // Fetch stats, schedules and suggestions
-      const [subjsData, todayData, allEvents] = await Promise.all([
+      const [subjsData, todayData, allEvents, summaryData] = await Promise.all([
         attendanceService.getSubjectsAttendance(activeSem.id),
         attendanceService.getToday(activeSem.id),
-        calendarService.list(activeSem.id)
+        calendarService.list(activeSem.id),
+        attendanceService.getSummary(activeSem.id)
       ]);
+
+      setOverallStats(summaryData);
 
       const todayStr = new Date().toLocaleDateString("en-CA");
       const todayEvs = allEvents.filter(e => e.date === todayStr);
@@ -164,7 +169,10 @@ const Dashboard: React.FC = () => {
         prev.map(occ => occ.id === occurrenceId ? { ...occ, attendance_status: updated.attendance_status } : occ)
       );
 
-      const subjsData = await attendanceService.getSubjectsAttendance(semester.id);
+      const [subjsData, newSummary] = await Promise.all([
+        attendanceService.getSubjectsAttendance(semester.id),
+        attendanceService.getSummary(semester.id)
+      ]);
       const sortedSubjects = [...subjsData].sort((a, b) => {
         const getPriority = (s: SubjectAttendanceStats) => {
           if (s.attendance_percent < s.min_attendance_percent) return 1;
@@ -174,6 +182,8 @@ const Dashboard: React.FC = () => {
         return getPriority(a) - getPriority(b);
       });
       setSubjects(sortedSubjects);
+      setOverallStats(newSummary);
+
     } catch (err) {
       console.error("Failed to update status", err);
       setError("Failed to record attendance. Please try again.");
@@ -318,9 +328,49 @@ const Dashboard: React.FC = () => {
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-32 space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-            <p className="text-xs text-zinc-400 font-semibold">Loading workspace details...</p>
+          <div className="space-y-12 animate-pulse">
+            {/* Header Skeleton */}
+            <div className="pt-2 pb-2 space-y-3">
+              <div className="h-8 w-64 bg-zinc-200 rounded-xl" />
+              <div className="h-4 w-96 bg-zinc-150 rounded-xl" />
+            </div>
+
+            {/* Metrics Grid Skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="premium-card p-6 h-32 bg-zinc-50/50 flex flex-col justify-between border-dashed">
+                  <div className="h-3 w-20 bg-zinc-200 rounded" />
+                  <div className="h-7 w-24 bg-zinc-250 rounded-lg mt-2" />
+                  <div className="h-3.5 w-32 bg-zinc-200 rounded mt-2" />
+                </div>
+              ))}
+            </div>
+
+            {/* Main Content Layout Skeleton */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              <div className="lg:col-span-2 space-y-8">
+                <div className="h-4 w-32 bg-zinc-200 rounded" />
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="premium-card p-5 h-20 bg-zinc-50/50 flex items-center justify-between border-dashed">
+                      <div className="space-y-2">
+                        <div className="h-4.5 w-40 bg-zinc-250 rounded-lg" />
+                        <div className="h-3 w-24 bg-zinc-200 rounded" />
+                      </div>
+                      <div className="h-8 w-20 bg-zinc-200 rounded-xl" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-8">
+                <div className="h-4 w-32 bg-zinc-200 rounded" />
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="premium-card p-5 h-36 bg-zinc-50/50 border-dashed" />
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         ) : !semester ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4 animate-scale-in">
@@ -391,10 +441,10 @@ const Dashboard: React.FC = () => {
                   <div className="mt-3 flex items-baseline justify-between">
                     <div>
                       <h2 className="text-[26px] font-black text-zinc-900 leading-none">
-                        {subjects.length > 0 ? (subjects.reduce((sum, s) => sum + s.attendance_percent, 0) / subjects.length).toFixed(1) : "0.0"}%
+                        {overallStats ? overallStats.attendance_percent.toFixed(1) : "0.0"}%
                       </h2>
                       <p className="text-[10px] text-zinc-400 font-semibold mt-1">
-                        Attendance Margin: {subjects.reduce((sum, s) => sum + Math.floor(s.safe_bunks / (s.units_per_class || 1)), 0)} classes
+                        Overall Attendance
                       </p>
                     </div>
                   </div>
@@ -418,16 +468,16 @@ const Dashboard: React.FC = () => {
             {isUninitialized && (
               <div className="rounded-2xl border border-red-500/10 bg-red-50/20 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_1px_3px_rgba(15,23,42,0.01)] animate-fade-in">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-red-600">Setup Complete: Attendance Not Initialized</h4>
+                  <h4 className="text-sm font-bold text-red-600">No Attendance History Yet</h4>
                   <p className="text-[12px] text-zinc-500 font-medium max-w-xl">
-                    Enter the number of classes conducted and attended so far to activate tracking analytics.
+                    Import your historical attendance to activate tracking analytics. Takes less than a minute.
                   </p>
                 </div>
                 <Link 
                   to="/initialize-attendance"
                   className="rounded-xl bg-zinc-900 py-2.5 px-4 text-xs font-bold text-white hover:bg-zinc-800 shadow-sm transition-all shrink-0 text-center cursor-pointer"
                 >
-                  Initialize Attendance
+                  Import Attendance History
                 </Link>
               </div>
             )}
@@ -557,12 +607,28 @@ const Dashboard: React.FC = () => {
                   </h3>
 
                   {isUninitialized ? (
-                    <div className="rounded-2xl border border-zinc-200/60 bg-white p-8 text-center text-xs text-zinc-400 italic">
-                      Initialize attendance to display standings.
+                    <div className="rounded-[24px] border border-zinc-200/60 bg-white p-10 text-center space-y-4 animate-scale-in max-w-md mx-auto shadow-sm">
+                      <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                        No attendance data yet. Please initialize your baseline attendance counts to view standings.
+                      </p>
+                      <Link
+                        to="/initialize-attendance"
+                        className="inline-block rounded-xl bg-zinc-900 px-4 py-2 text-[11px] font-bold text-white hover:bg-zinc-800 transition-colors shadow-sm cursor-pointer"
+                      >
+                        Initialize Attendance
+                      </Link>
                     </div>
                   ) : subjects.length === 0 ? (
-                    <div className="rounded-2xl border border-zinc-200/60 bg-white p-8 text-center text-xs text-zinc-400 italic">
-                      No subjects configured.
+                    <div className="rounded-[24px] border border-zinc-200/60 bg-white p-10 text-center space-y-4 animate-scale-in max-w-md mx-auto shadow-sm">
+                      <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                        No subjects configured yet. Add subjects and import your timetable slots.
+                      </p>
+                      <Link
+                        to="/setup"
+                        className="inline-block rounded-xl bg-zinc-900 px-4 py-2 text-[11px] font-bold text-white hover:bg-zinc-800 transition-colors shadow-sm cursor-pointer"
+                      >
+                        Open Setup Wizard
+                      </Link>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

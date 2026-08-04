@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { aiService } from "../services/ai";
-import { Send, AlertCircle, Bot, User, Clock, Sparkles, Loader2 } from "lucide-react";
+import { Send, AlertCircle, Bot, User, Clock, Sparkles } from "lucide-react";
 
 interface Message {
   id: string;
@@ -113,7 +113,12 @@ const AIAssistant: React.FC = () => {
               <Bot className="h-5.5 w-5.5 text-purple-500" />
             </div>
             <div>
-              <h2 className="text-sm font-bold tracking-tight text-zinc-800">Leave Planner Assistant</h2>
+              <h2 className="text-sm font-bold tracking-tight text-zinc-800 flex items-center gap-1.5">
+                Leave Planner Assistant
+                <span className="text-[8px] bg-purple-50 text-purple-650 border border-purple-100 font-extrabold uppercase px-1 py-0.2 rounded-md leading-none select-none tracking-wider shrink-0">
+                  Experimental Beta
+                </span>
+              </h2>
               <p className="text-[10px] text-zinc-400 font-bold flex items-center mt-0.5 uppercase tracking-wider">
                 <Clock className="h-3 w-3 mr-1 text-zinc-300" />
                 AI-Powered Simulations
@@ -138,7 +143,12 @@ const AIAssistant: React.FC = () => {
                 <Sparkles className="h-5.5 w-5.5 animate-pulse" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-sm font-bold text-zinc-800">Start chatting with the AI Assistant</h3>
+                <h3 className="text-sm font-bold text-zinc-800 flex items-center justify-center gap-2">
+                  <span>Ask anything about your attendance</span>
+                  <span className="text-[8.5px] bg-purple-50 text-purple-600 border border-purple-100 font-extrabold uppercase px-1.5 py-0.5 rounded-md leading-none">
+                    Experimental Beta
+                  </span>
+                </h3>
                 <p className="text-[12px] text-zinc-450 leading-relaxed font-semibold">
                   Query your attendance standing, check margins, or simulate planned leaves in natural language.
                 </p>
@@ -185,13 +195,14 @@ const AIAssistant: React.FC = () => {
           )}
 
           {loading && (
-            <div className="flex items-start space-x-3.5 mr-auto max-w-[85%] mt-2 animate-scale-in">
+            <div className="flex items-start space-x-3.5 mr-auto max-w-[85%] mt-2 animate-scale-in w-full">
               <div className="h-8 w-8 rounded-full flex items-center justify-center border border-zinc-200/60 bg-white text-xs shrink-0 shadow-sm">
-                <Bot className="h-4 w-4 text-purple-500" />
+                <Bot className="h-4 w-4 text-purple-500 animate-pulse" />
               </div>
-              <div className="rounded-2xl px-5 py-3.5 bg-white border border-zinc-200/50 text-zinc-800 flex items-center space-x-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.02)]">
-                <Loader2 className="h-4 w-4 animate-spin text-purple-500 shrink-0" />
-                <span className="text-xs font-semibold text-zinc-555">Calculating attendance...</span>
+              <div className="rounded-2xl px-5 py-4.5 bg-white border border-zinc-200/50 text-zinc-800 space-y-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.02)] flex-grow max-w-sm animate-pulse">
+                <div className="h-3 w-3/4 bg-zinc-200 rounded" />
+                <div className="h-3 w-1/2 bg-zinc-150 rounded" />
+                <div className="h-3 w-5/6 bg-zinc-100 rounded" />
               </div>
             </div>
           )}
@@ -228,6 +239,9 @@ const AIAssistant: React.FC = () => {
               <Send className="h-4 w-4" />
             </button>
           </form>
+          <p className="text-[9.5px] text-zinc-400 text-center mt-3 font-semibold select-none">
+            AttendWise AI assistant responses are experimental and for simulation purposes only. Always cross-verify percentages.
+          </p>
         </div>
 
       </main>

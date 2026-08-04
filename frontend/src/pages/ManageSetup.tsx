@@ -632,7 +632,7 @@ const ManageSetup: React.FC = () => {
               <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-100 pb-2">Current Subjects ({subjects.length})</h3>
               
               {subjects.length === 0 ? (
-                <div className="text-center py-8 text-xs text-zinc-400 italic font-semibold">No subjects configured.</div>
+                <div className="text-center py-8 text-xs text-zinc-500 font-semibold">No subjects added. Add your first subject using the form below.</div>
               ) : (
                 <div className="divide-y divide-zinc-100">
                   {subjects.map((subj) => (

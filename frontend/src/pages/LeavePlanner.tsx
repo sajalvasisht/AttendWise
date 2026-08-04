@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { semesterService } from "../services/semester";
 import type { Semester } from "../services/semester";
 import { plannerService } from "../services/planner";
 import type { SimulationResponse } from "../services/planner";
 import { calendarService } from "../services/calendar";
 import type { CalendarEvent } from "../services/calendar";
+import { subjectService } from "../services/subject";
 import {
   Plus, Trash2, Loader2, AlertCircle, CheckCircle2, AlertTriangle, ArrowRight, Compass
 } from "lucide-react";
@@ -19,16 +20,13 @@ function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
       focused
         ? "rgba(15,23,42,0.3)"
         : hovered
-        ? "rgba(15,23,42,0.14)"
+        ? "rgba(15,23,42,0.15)"
         : "rgba(15,23,42,0.08)"
     }`,
-    backgroundColor: focused ? "#ffffff" : hovered ? "#ffffff" : "#fafafa",
-    boxShadow: focused
-      ? "0 0 0 3px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.02)"
-      : "none",
-    transition:
-      "border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease",
+    backgroundColor: focused ? "#ffffff" : "#fafafa",
     outline: "none",
+    boxShadow: focused ? "0 4px 12px rgba(15,23,42,0.04)" : "none",
+    transition: "all 0.2s ease-in-out"
   };
 }
 
@@ -42,6 +40,7 @@ const LeavePlanner: React.FC = () => {
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [hasSubjects, setHasSubjects] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [dateFocused, setDateFocused] = useState(false);
@@ -57,6 +56,8 @@ const LeavePlanner: React.FC = () => {
         } else {
           const activeSem = sems.find(s => s.is_active) || sems[0];
           setSemester(activeSem);
+          const subjs = await subjectService.list(activeSem.id);
+          setHasSubjects(subjs.length > 0);
           fetchCalendarEvents(activeSem.id);
         }
       } catch (err) {
@@ -96,7 +97,7 @@ const LeavePlanner: React.FC = () => {
   };
 
   // Trigger leave simulation
-  const handleSimulate = async () => {
+  const handleRunSimulation = async () => {
     if (!semester) return;
     
     if (datesList.length === 0) {
@@ -142,11 +143,11 @@ const LeavePlanner: React.FC = () => {
     const anyBelow = simulation.subjects.some(s => s.recovery_required);
     if (anyBelow) {
       return {
-        label: "Below threshold",
+        label: "Danger",
         color: "text-red-650",
-        bg: "bg-red-50/60",
+        bg: "bg-red-50/15",
         border: "border-red-100",
-        icon: <AlertCircle className="h-5.5 w-5.5 text-red-500 shrink-0" />
+        icon: <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
       };
     }
 
@@ -155,22 +156,49 @@ const LeavePlanner: React.FC = () => {
       return {
         label: "Warning",
         color: "text-amber-600",
-        bg: "bg-amber-50/60",
+        bg: "bg-amber-50/15",
         border: "border-amber-100",
-        icon: <AlertTriangle className="h-5.5 w-5.5 text-amber-600 shrink-0" />
+        icon: <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
       };
     }
 
     return {
       label: "Safe",
-      color: "text-emerald-600",
-      bg: "bg-emerald-50/60",
+      color: "text-emerald-650",
+      bg: "bg-emerald-50/15",
       border: "border-emerald-100",
-      icon: <CheckCircle2 className="h-5.5 w-5.5 text-emerald-600 shrink-0" />
+      icon: <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
     };
   };
 
   const status = getOverallStatus();
+
+  if (!hasSubjects && !initialLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-50/20 text-zinc-900 flex flex-col font-sans">
+        <Navbar />
+        <main className="flex-grow max-w-5xl mx-auto w-full px-6 py-14 flex flex-col justify-center items-center">
+          <div className="premium-card p-10 text-center space-y-4 max-w-sm mx-auto shadow-sm animate-scale-in">
+            <div className="h-10 w-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 mx-auto">
+              <Compass className="h-5 w-5" />
+            </div>
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-bold text-zinc-800">No Attendance Data Available</h4>
+              <p className="text-[11px] text-zinc-550 leading-relaxed">
+                No attendance data available to simulate leaves. Please add your subjects and schedule setup first.
+              </p>
+            </div>
+            <Link
+              to="/setup"
+              className="inline-block rounded-xl bg-zinc-900 px-4 py-2 text-[11.5px] font-bold text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              Configure Setup
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased selection:bg-emerald-100 selection:text-emerald-950 flex flex-col font-sans">
@@ -251,7 +279,7 @@ const LeavePlanner: React.FC = () => {
                 </div>
 
                 <motion.button
-                  onClick={handleSimulate}
+                  onClick={handleRunSimulation}
                   disabled={loading || datesList.length === 0}
                   whileHover={!(loading || datesList.length === 0) ? { y: -1, boxShadow: "0 6px 18px rgba(15,23,42,0.16)" } : undefined}
                   whileTap={!(loading || datesList.length === 0) ? { y: 0, scale: 0.99, boxShadow: "0 2px 6px rgba(15,23,42,0.08)" } : undefined}

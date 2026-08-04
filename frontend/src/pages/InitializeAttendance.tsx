@@ -155,9 +155,9 @@ const InitializeAttendance: React.FC = () => {
           
           {/* Header */}
           <div className="border-b border-zinc-150/60 pb-5">
-            <h1 className="text-2xl font-black tracking-tight text-zinc-900">Initialize Attendance</h1>
+            <h1 className="text-2xl font-black tracking-tight text-zinc-900">Historical Attendance Import</h1>
             <p className="text-xs text-zinc-500 font-semibold mt-1">
-              Select how you would like to sync onboarding calculations with your historical timetable class entries.
+              Tell AttendWise about your attendance history so far. This creates editable records in your calendar from your semester start date.
             </p>
           </div>
 
@@ -181,13 +181,13 @@ const InitializeAttendance: React.FC = () => {
             >
               <div>
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xs font-bold text-zinc-800">Mode A: Keep onboarding totals</h3>
+                  <h3 className="text-xs font-bold text-zinc-800">Enter My Totals</h3>
                   <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${mode === "modeA" ? "border-zinc-900 bg-zinc-900" : "border-zinc-300 bg-transparent"}`}>
                     {mode === "modeA" && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
                   </div>
                 </div>
                 <p className="text-[10.5px] text-zinc-450 font-semibold leading-relaxed mt-2.5">
-                  Seed your stats with direct totals. Past classes remain unmarked ("Unrecorded") so they don't interfere with your baseline numbers.
+                  Enter total classes attended and missed so far. AttendWise creates the matching historical records automatically — editable in the Daily Tracker.
                 </p>
               </div>
             </div>
@@ -203,13 +203,13 @@ const InitializeAttendance: React.FC = () => {
             >
               <div>
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xs font-bold text-zinc-800">Mode B: Build complete history</h3>
+                  <h3 className="text-xs font-bold text-zinc-800">Start From Scratch</h3>
                   <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${mode === "modeB" ? "border-zinc-900 bg-zinc-900" : "border-zinc-300 bg-transparent"}`}>
                     {mode === "modeB" && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
                   </div>
                 </div>
                 <p className="text-[10.5px] text-zinc-450 font-semibold leading-relaxed mt-2.5">
-                  Resets initial baseline stats to 0. You will review and mark all scheduled classes starting from the semester launch on your timeline.
+                  No prior history to import. All past classes will be generated as unrecorded — mark them yourself in the Daily Tracker.
                 </p>
               </div>
             </div>
@@ -223,8 +223,8 @@ const InitializeAttendance: React.FC = () => {
                 <div className="rounded-2xl border border-blue-150 bg-blue-50/20 p-5 text-xs text-blue-800 flex items-start space-x-3.5 leading-normal font-semibold shadow-[0_1px_3px_rgba(15,23,42,0.01)]">
                   <Info className="h-5 w-5 shrink-0 text-blue-500" />
                   <div>
-                    <span className="font-extrabold block mb-0.5">Why is this required?</span>
-                    AttendWise needs your baseline stats to calculate attendance margins and consecutive classes. You will mark today's classes onwards using the Daily Tracker.
+                    <span className="font-extrabold block mb-0.5">What does this do?</span>
+                    AttendWise will create past attendance records (present/absent) matching your totals. You can review and adjust each record individually in the Daily Tracker.
                   </div>
                 </div>
 
@@ -327,7 +327,7 @@ const InitializeAttendance: React.FC = () => {
                   </>
                 ) : (
                   <span>
-                    {mode === "modeA" ? "Save Baseline & Start Tracking" : "Generate Calendar & Start Review"}
+                    {mode === "modeA" ? "Import History & Start Tracking" : "Generate Calendar & Start Tracking"}
                   </span>
                 )}
               </motion.button>

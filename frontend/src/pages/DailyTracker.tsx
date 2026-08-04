@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { semesterService } from "../services/semester";
 import type { Semester } from "../services/semester";
 import { attendanceService } from "../services/attendance";
 import type { LectureOccurrence, SubjectAttendanceStats } from "../services/attendance";
 import { calendarService } from "../services/calendar";
 import type { CalendarEvent } from "../services/calendar";
+import { timetableService } from "../services/timetable";
 import { 
-  Clock, Loader2, ChevronLeft, ChevronRight, AlertCircle, Brain, Calendar as CalendarIcon, X, Eye
+  Clock, ChevronLeft, ChevronRight, AlertCircle, Brain, Calendar as CalendarIcon, X, Eye, CalendarDays
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -28,6 +29,8 @@ const DailyTracker: React.FC = () => {
   const [subjectStats, setSubjectStats] = useState<SubjectAttendanceStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [hasTimetable, setHasTimetable] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Side Drawer view state
@@ -41,11 +44,16 @@ const DailyTracker: React.FC = () => {
         if (sems.length === 0) {
           navigate("/setup");
         } else {
-          setSemester(sems.find(s => s.is_active) || sems[0]);
+          const activeSem = sems.find(s => s.is_active) || sems[0];
+          setSemester(activeSem);
+          const slots = await timetableService.list(activeSem.id);
+          setHasTimetable(slots.length > 0);
         }
       } catch (err) {
         console.error("Failed to load semesters", err);
         setError("Could not load your semester data.");
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchSemester();
@@ -216,6 +224,33 @@ const DailyTracker: React.FC = () => {
   const calendarDays = getCalendarDays();
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const todayStr = new Date().toLocaleDateString("en-CA");
+
+  if (!hasTimetable && !initialLoading) {
+    return (
+      <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased flex flex-col font-sans">
+        <Navbar />
+        <main className="flex-grow max-w-5xl mx-auto w-full px-6 py-14 flex flex-col justify-center items-center">
+          <div className="premium-card p-10 text-center space-y-4 max-w-sm mx-auto shadow-sm animate-scale-in">
+            <div className="h-10 w-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 mx-auto">
+              <CalendarDays className="h-5 w-5" />
+            </div>
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-bold text-zinc-800">No Timetable Imported</h4>
+              <p className="text-[11px] text-zinc-550 leading-relaxed">
+                No timetable imported yet. Please configure your weekly class schedule to generate your calendar timeline.
+              </p>
+            </div>
+            <Link
+              to="/setup"
+              className="inline-block rounded-xl bg-zinc-900 px-4 py-2 text-[11.5px] font-bold text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              Configure Schedule
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased selection:bg-emerald-100 selection:text-emerald-950 flex flex-col font-sans">
@@ -478,9 +513,16 @@ const DailyTracker: React.FC = () => {
                   <span className="text-[9.5px] text-zinc-400 font-bold uppercase tracking-widest block">Lectures ({occurrences.length})</span>
                   
                   {loading ? (
-                    <div className="flex flex-col justify-center items-center py-16 space-y-3">
-                      <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
-                      <p className="text-[11px] text-zinc-400 font-semibold">Loading day schedule...</p>
+                    <div className="space-y-4 animate-pulse">
+                      {[1, 2].map((i) => (
+                        <div key={i} className="premium-card p-5 h-20 bg-zinc-50/50 flex items-center justify-between border-dashed">
+                          <div className="space-y-2 flex-grow">
+                            <div className="h-4 w-1/3 bg-zinc-200 rounded" />
+                            <div className="h-3 w-1/4 bg-zinc-150 rounded" />
+                          </div>
+                          <div className="h-8 w-24 bg-zinc-200 rounded-xl" />
+                        </div>
+                      ))}
                     </div>
                   ) : isWeekend() && occurrences.length === 0 ? (
                     <div className="premium-card p-6 text-center space-y-1.5 text-zinc-400">

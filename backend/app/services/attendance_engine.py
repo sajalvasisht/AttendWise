@@ -5,6 +5,12 @@ from typing import Dict, Any, List
 from app.models.models import Subject, LectureOccurrence, Semester
 
 def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject) -> Dict[str, Any]:
+    """Compute per-subject attendance statistics purely from LectureOccurrence records.
+    
+    The calendar is the single source of truth. No independent totals are read from
+    the Subject model (initial_conducted / initial_attended are always 0 post-sync and
+    are intentionally ignored here).
+    """
     occurrences = db.query(LectureOccurrence).filter(
         LectureOccurrence.semester_id == semester_id,
         LectureOccurrence.subject_id == subject.id
@@ -15,19 +21,19 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
     absent = sum(1 for occ in occurrences if occ.attendance_status == "absent")
     cancelled = sum(1 for occ in occurrences if occ.attendance_status == "cancelled")
     unmarked = sum(1 for occ in occurrences if occ.attendance_status == "unmarked")
-    
-    init_conducted = subject.initial_conducted if subject.initial_conducted is not None else 0
-    init_attended = subject.initial_attended if subject.initial_attended is not None else 0
-    is_initialized = (subject.initial_conducted is not None) or (present + absent > 0)
-    
-    # Weighted Units Calculation
+
+    # A subject is considered initialized once at least one class has been marked
+    # (present or absent). This is purely calendar-driven — no column flags needed.
+    is_initialized = (present + absent) > 0
+
+    # Weighted Units Calculation — derived entirely from LectureOccurrence statuses
     earned_weight = subject.units_earned_per_class
     lost_weight = subject.units_lost_per_class
-    
-    attended_units = (present * earned_weight) + (init_attended * earned_weight)
-    absent_units = (absent * lost_weight) + ((init_conducted - init_attended) * lost_weight)
+
+    attended_units = present * earned_weight
+    absent_units = absent * lost_weight
     conducted_units = attended_units + absent_units
-    
+
     if conducted_units == 0:
         percent = 100.0
     else:
@@ -60,11 +66,11 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
         "code": subject.code,
         "faculty": subject.faculty,
         "total_lectures": total,
-        "attended": present + init_attended, # Return raw counts for UI displays
-        "absent": absent + (init_conducted - init_attended),
+        "attended": present,
+        "absent": absent,
         "cancelled": cancelled,
         "unmarked": unmarked,
-        "conducted": present + absent + init_conducted,
+        "conducted": present + absent,
         "attendance_percent": percent if is_initialized else 0.0,
         "min_attendance_percent": min_percent,
         "safe_bunks": safe_bunks if is_initialized else 0,
@@ -103,7 +109,11 @@ def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
         conducted_units += stats["attended"] * subject.units_earned_per_class + stats["absent"] * subject.units_lost_per_class
         attended_units += stats["attended"] * subject.units_earned_per_class
 
-    is_initialized = len(subjects) > 0 and all(stats["is_initialized"] for stats in subject_stats)
+    # A semester is considered initialized if at least one subject has recorded attendance.
+    # Using "any" rather than "all" avoids blocking metrics when some subjects (e.g. labs
+    # that start later in the semester) haven't had any classes yet.
+    is_initialized = len(subjects) > 0 and any(stats["is_initialized"] for stats in subject_stats)
+
 
     if conducted_units == 0:
         overall_percent = 100.0
@@ -128,33 +138,37 @@ def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
     }
 
 def sync_subject_past_occurrences(db: Session, semester_id: int, subject_id: int, attended: int, missed: int) -> None:
+    """Reconcile past LectureOccurrence records to match the requested attended/missed totals.
+
+    Non-destructive approach: existing records are updated in-place rather than deleted
+    and recreated. Dummy records are only added when the target delivered count exceeds
+    the number of timetable-generated records available. This preserves any manually
+    set per-day attendance markings where possible.
+
+    Algorithm:
+      1. Ensure enough past records exist (add dummies if needed).
+      2. Assign statuses to past records in date order:
+         - First `attended` records → "present"
+         - Next `missed` records  → "absent"
+         - Remaining             → "unmarked"
+      3. Zero out the now-obsolete initial_conducted/initial_attended staging fields.
+    """
     from datetime import date, time, timedelta
-    
+
     semester = db.query(Semester).filter(Semester.id == semester_id).first()
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not semester or not subject:
         return
 
-    # Delete unmarked/marked occurrences before today for this subject
-    db.query(LectureOccurrence).filter(
-        LectureOccurrence.subject_id == subject.id,
-        LectureOccurrence.date < date.today()
-    ).delete()
-    db.commit()
+    to_conduct = attended + missed
 
-    # Regenerate occurrences from semester start to yesterday using occurrence generator
-    from app.services.occurrence_generator import generate_occurrences
-    generate_occurrences(db, semester_id, start_from_date=semester.start_date)
-
-    # Now load past occurrences of this subject
+    # Load all past occurrences for this subject, ordered chronologically
     past_occs = db.query(LectureOccurrence).filter(
         LectureOccurrence.subject_id == subject.id,
         LectureOccurrence.date < date.today()
     ).order_by(LectureOccurrence.date.asc()).all()
 
-    to_conduct = attended + missed
-
-    # If we need more occurrences than generated, add dummy occurrences in the past
+    # If the target delivered count exceeds available records, pad with dummy entries
     diff = to_conduct - len(past_occs)
     if diff > 0:
         ref_date = subject.active_from or semester.start_date
@@ -171,13 +185,13 @@ def sync_subject_past_occurrences(db: Session, semester_id: int, subject_id: int
             )
             db.add(new_occ)
         db.commit()
-        # Re-query
+        # Re-query to include the newly added padding records
         past_occs = db.query(LectureOccurrence).filter(
             LectureOccurrence.subject_id == subject.id,
             LectureOccurrence.date < date.today()
         ).order_by(LectureOccurrence.date.asc()).all()
 
-    # Mark occurrences
+    # Assign statuses in-place: first `attended` → present, next `missed` → absent, rest → unmarked
     for idx, occ in enumerate(past_occs):
         if idx < attended:
             occ.attendance_status = "present"
@@ -186,7 +200,7 @@ def sync_subject_past_occurrences(db: Session, semester_id: int, subject_id: int
         else:
             occ.attendance_status = "unmarked"
 
-    # Zero out database offsets to keep the calendar as the single source of truth
+    # Zero out the transient staging columns — the calendar is now the only source of truth
     subject.initial_conducted = 0
     subject.initial_attended = 0
     db.commit()

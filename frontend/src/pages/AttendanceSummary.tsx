@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { semesterService } from "../services/semester";
 import { attendanceService } from "../services/attendance";
 import type { OverallAttendanceStats, SubjectAttendanceStats } from "../services/attendance";
-import { Loader2, AlertCircle, BookOpen, Calculator } from "lucide-react";
+import { AlertCircle, BookOpen, Calculator } from "lucide-react";
 import Navbar from "../components/Navbar";
 
 const AttendanceSummary: React.FC = () => {
@@ -58,9 +58,33 @@ const AttendanceSummary: React.FC = () => {
         )}
 
         {loading ? (
-          <div className="flex flex-col justify-center items-center py-32 space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-            <p className="text-xs text-zinc-400 font-semibold">Compiling stats...</p>
+          <div className="space-y-12 animate-pulse">
+            {/* Header Skeleton */}
+            <div className="premium-card p-8 bg-zinc-50/50 space-y-6 border-dashed">
+              <div className="space-y-2">
+                <div className="h-3.5 w-24 bg-zinc-200 rounded" />
+                <div className="h-8 w-56 bg-zinc-250 rounded-xl" />
+              </div>
+              <div className="grid grid-cols-3 gap-6 pt-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-3 w-16 bg-zinc-200 rounded" />
+                    <div className="h-6 w-12 bg-zinc-250 rounded-lg" />
+                  </div>
+                ))}
+              </div>
+              <div className="h-10 w-full bg-zinc-200/50 rounded-xl" />
+            </div>
+
+            {/* Grid list Skeleton */}
+            <div className="space-y-6">
+              <div className="h-4 w-32 bg-zinc-200 rounded" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="premium-card p-6 h-56 bg-zinc-50/50 border-dashed" />
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <>
@@ -70,13 +94,13 @@ const AttendanceSummary: React.FC = () => {
                 <div className="flex items-center justify-between border-b border-zinc-100 pb-5">
                   <div className="space-y-1.5">
                     <h2 className="text-xl font-black text-zinc-900 tracking-tight">Semester Summary</h2>
-                    <p className="text-xs text-zinc-500 font-medium leading-relaxed max-w-md">Aggregated attendance percentages across all enrolled subjects.</p>
+                    <p className="text-xs text-zinc-500 font-medium leading-relaxed max-w-md">Overall attendance calculated from all recorded classes across your enrolled subjects.</p>
                   </div>
                   
                   {/* Huge Percentage indicator */}
                   <div className="text-right">
                     <span className="text-3xl font-black tracking-tight text-zinc-900 leading-none">{overall.attendance_percent}%</span>
-                    <span className="block text-[9px] text-zinc-400 uppercase font-bold tracking-widest mt-1">Average</span>
+                    <span className="block text-[9px] text-zinc-400 uppercase font-bold tracking-widest mt-1">Overall</span>
                   </div>
                 </div>
 
@@ -123,11 +147,17 @@ const AttendanceSummary: React.FC = () => {
                     <BookOpen className="h-5 w-5" />
                   </div>
                   <div className="space-y-1.5">
-                    <h4 className="text-xs font-bold text-zinc-800">No Courses Tracked</h4>
+                    <h4 className="text-xs font-bold text-zinc-800">No Attendance Recorded</h4>
                     <p className="text-[11px] text-zinc-550 leading-relaxed">
-                      You haven't defined any subjects for the current semester. Please run the setup wizard or initialize your attendance baseline to begin tracking.
+                      No attendance has been recorded. Add subjects and import your timetable/attendance setup to view metrics.
                     </p>
                   </div>
+                  <Link
+                    to="/setup"
+                    className="inline-block rounded-xl bg-zinc-900 px-4 py-2 text-[11.5px] font-bold text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                  >
+                    Get Started
+                  </Link>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

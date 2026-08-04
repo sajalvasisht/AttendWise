@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const BetaWelcomeModal: React.FC = () => {

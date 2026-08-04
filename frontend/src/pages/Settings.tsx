@@ -127,7 +127,7 @@ const Settings: React.FC = () => {
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText.toLowerCase() !== "delete my account") {
-      alert("Please type 'delete my account' to confirm.");
+      setError("Please type 'delete my account' to confirm account deletion.");
       return;
     }
     setLoading(true);
