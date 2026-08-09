@@ -9,6 +9,7 @@ from app.schemas.calendar import CalendarEventCreate, CalendarEventResponse
 from app.api.deps import get_current_user
 from app.services.occurrence_generator import generate_occurrences
 from app.api.subjects import verify_semester_owner, verify_active_semester
+from app.services.analytics_service import analytics
 
 router = APIRouter(prefix="/semesters/{semester_id}/calendar", tags=["calendar"])
 
@@ -66,6 +67,10 @@ def save_calendar_events(
     semester = db.query(Semester).filter(Semester.id == semester_id).first()
     if semester:
         generate_occurrences(db, semester_id, start_from_date=semester.start_date)
+
+    # Log calendar import event
+    analytics.log_event(db, current_user, "IMPORT_CALENDAR", page="calendar",
+                        meta={"event_count": len(new_events), "mode": mode})
 
     # Fetch and return the newly saved events
     return db.query(CalendarEvent).filter(CalendarEvent.semester_id == semester_id).all()

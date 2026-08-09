@@ -15,6 +15,7 @@ from app.schemas.auth import (
 from app.api.deps import get_current_user
 from app.services.google_auth import verify_google_token
 from app.services.email import send_verification_email, send_reset_password_email
+from app.services.analytics_service import analytics
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -71,13 +72,16 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    token = create_access_token(subject=user.id)
+    analytics.log_login(db, user)  # updates last_login_at + logs LOGIN event
     return {
-        "access_token": create_access_token(subject=user.id),
+        "access_token": token,
         "token_type": "bearer",
     }
 
 @router.post("/google", response_model=Token)
 def google_auth(request: GoogleLoginRequest, db: Session = Depends(get_db)) -> Any:
+
     # Verify Google token
     payload = verify_google_token(request.credential)
     email = payload["email"].strip().lower()
@@ -109,13 +113,16 @@ def google_auth(request: GoogleLoginRequest, db: Session = Depends(get_db)) -> A
         db.commit()
         db.refresh(user)
 
+    token = create_access_token(subject=user.id)
+    analytics.log_login(db, user)  # updates last_login_at + logs LOGIN event
     return {
-        "access_token": create_access_token(subject=user.id),
+        "access_token": token,
         "token_type": "bearer",
     }
 
 @router.post("/verify-email")
 def verify_email(request: VerifyEmailRequest, db: Session = Depends(get_db)) -> Any:
+
     user = db.query(User).filter(User.verification_token == request.token).first()
     if not user:
         raise HTTPException(

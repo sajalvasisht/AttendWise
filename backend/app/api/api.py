@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api import auth, semesters, subjects, timetable, calendar, attendance, planner, ai, notifications
+from app.api import auth, semesters, subjects, timetable, calendar, attendance, planner, ai, notifications, analytics
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -11,3 +11,5 @@ api_router.include_router(attendance.router)
 api_router.include_router(planner.router)
 api_router.include_router(ai.router)
 api_router.include_router(notifications.router)
+api_router.include_router(analytics.router)
+

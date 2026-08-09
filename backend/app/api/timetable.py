@@ -9,6 +9,7 @@ from app.schemas.timetable import TimetableSlotCreate, TimetableSlotResponse
 from app.api.deps import get_current_user
 from app.services.occurrence_generator import generate_occurrences
 from app.api.subjects import verify_semester_owner, verify_active_semester
+from app.services.analytics_service import analytics
 
 router = APIRouter(prefix="/semesters/{semester_id}/timetable", tags=["timetable"])
 
@@ -63,6 +64,10 @@ def save_timetable_slots(
     semester = db.query(Semester).filter(Semester.id == semester_id).first()
     if semester:
         generate_occurrences(db, semester_id, start_from_date=semester.start_date)
+
+    # Log timetable import event
+    analytics.log_event(db, current_user, "IMPORT_TIMETABLE", page="timetable",
+                        meta={"slot_count": len(new_slots), "mode": mode})
 
     # Fetch and return the newly saved slots
     return db.query(TimetableSlot).filter(TimetableSlot.semester_id == semester_id).all()

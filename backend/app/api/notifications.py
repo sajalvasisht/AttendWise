@@ -7,6 +7,9 @@ from app.database.session import get_db
 from app.models.models import User, Semester, Subject, CalendarEvent, PlannedLeave
 from app.api.deps import get_current_user
 from app.services.attendance_engine import calculate_semester_summary
+from app.services.analytics_service import analytics
+from pydantic import BaseModel, Field
+from typing import Optional
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -106,3 +109,21 @@ def get_notifications(
         })
 
     return notifications
+
+
+class FeedbackSubmission(BaseModel):
+    category: Optional[str] = Field(None, description="'bug', 'feature', 'general'")
+    message: Optional[str] = Field(None, description="Optional feedback content")
+
+
+@router.post("/feedback")
+def submit_feedback(
+    feedback_in: Optional[FeedbackSubmission] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """Log user feedback submission without storing sensitive details."""
+    cat = feedback_in.category if feedback_in else "general"
+    analytics.log_event(db, current_user, "FEEDBACK_SUBMITTED", page="feedback",
+                        meta={"category": cat})
+    return {"status": "success", "message": "Feedback recorded. Thank you!"}

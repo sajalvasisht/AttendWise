@@ -13,9 +13,11 @@ class LectureOccurrenceResponse(BaseModel):
     attendance_status: str
     subject: SubjectResponse
     room: Optional[str] = None
+    is_imported: bool = False
 
     class Config:
         from_attributes = True
+
 
 class AttendanceUpdate(BaseModel):
     status: str = Field(..., description="'present', 'absent', 'cancelled', 'unmarked'")

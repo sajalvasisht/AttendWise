@@ -9,6 +9,7 @@ export interface LectureOccurrence {
   start_time: string; // "HH:MM:SS" or "HH:MM"
   end_time: string;
   attendance_status: "unmarked" | "present" | "absent" | "cancelled" | "holiday" | "medical_leave" | "other";
+  is_imported: boolean;
   subject: Subject;
 }
 

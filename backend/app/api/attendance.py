@@ -10,6 +10,7 @@ from app.api.deps import get_current_user
 from app.api.subjects import verify_semester_owner, verify_active_semester
 from app.schemas.attendance_summary import OverallAttendanceStats, SubjectAttendanceStats
 from app.services.attendance_engine import calculate_semester_summary
+from app.services.analytics_service import analytics
 
 router = APIRouter(prefix="/semesters/{semester_id}/attendance", tags=["attendance"])
 
@@ -85,9 +86,18 @@ def update_occurrence_status(
         )
         
     occurrence.attendance_status = status_lower
+    # Student manually set this status — clear the imported flag so the
+    # "Imported History" badge is removed in the Daily Tracker UI.
+    occurrence.is_imported = False
     db.commit()
     db.refresh(occurrence)
+
+    # Log attendance marking event (without sensitive content)
+    analytics.log_event(db, current_user, "MARK_ATTENDANCE", page="tracker",
+                        meta={"status": status_lower})
+
     return occurrence
+
 
 @router.get("/summary", response_model=OverallAttendanceStats)
 def read_attendance_summary(
@@ -196,4 +206,9 @@ def initialize_attendance(
             )
             
     db.commit()
+
+    # Log setup completed event
+    analytics.log_event(db, current_user, "SETUP_COMPLETED", page="initialize_attendance",
+                        meta={"subjects_initialized": len(init_in.initializations)})
+
     return {"message": "Attendance successfully initialized"}

@@ -13,6 +13,7 @@ from app.services.ai.schemas import ValidationResultResponse, ChatMessage, ChatR
 from app.services.ai.assistant import process_assistant_message
 from app.models.models import Semester
 from datetime import date
+from app.services.analytics_service import analytics
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -114,4 +115,10 @@ def assistant_chat(
 
     # Resolve relative to server's current date
     current_date = date.today()
-    return process_assistant_message(db, semester.id, chat_in.message, current_date)
+    response = process_assistant_message(db, semester.id, chat_in.message, current_date)
+
+    # Log AI query event (privacy-safe: intent only, no prompt text)
+    analytics.log_event(db, current_user, "AI_QUERY", page="ai_assistant",
+                        meta={"intent": getattr(response, "intent", "unknown") if hasattr(response, "intent") else "query"})
+
+    return response

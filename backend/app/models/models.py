@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Time, ForeignKey, DateTime, Float, Boolean
+from sqlalchemy import Column, Integer, String, Date, Time, ForeignKey, DateTime, Float, Boolean, JSON, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database.session import Base
@@ -17,8 +17,10 @@ class User(Base):
     google_id = Column(String, unique=True, index=True, nullable=True)
     profile_picture = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
 
     semesters = relationship("Semester", back_populates="user", cascade="all, delete-orphan")
+    events = relationship("UserEvent", back_populates="user", cascade="all, delete-orphan")
 
 
 class Semester(Base):
@@ -111,6 +113,10 @@ class LectureOccurrence(Base):
     end_time = Column(Time, nullable=False)
     attendance_status = Column(String, default="unmarked", nullable=False)  # "present", "absent", "cancelled", "unmarked"
     room = Column(String, nullable=True)
+    is_imported = Column(Boolean, default=False, server_default="false", nullable=False)
+    # is_imported=True: status was set by the historical attendance import engine
+    # is_imported=False: status was set (or reset) by the student manually
+
 
     semester = relationship("Semester", back_populates="lecture_occurrences")
     subject = relationship("Subject", back_populates="lecture_occurrences")
@@ -125,3 +131,34 @@ class PlannedLeave(Base):
     reason = Column(String, nullable=True)
 
     semester = relationship("Semester", back_populates="planned_leaves")
+
+
+class UserEvent(Base):
+    """Lightweight product analytics event store.
+
+    Tracks anonymous usage events (e.g. LOGIN, MARK_ATTENDANCE) without
+    collecting any sensitive content (passwords, attendance data, AI prompts).
+    All analytics logging is fire-and-forget to avoid blocking requests.
+
+    Supported event_type values (exhaustive list for beta):
+      LOGIN, IMPORT_TIMETABLE, IMPORT_CALENDAR, MARK_ATTENDANCE,
+      AI_QUERY, SUBJECT_CREATED, SETUP_COMPLETED, FEEDBACK_SUBMITTED
+    """
+    __tablename__ = "user_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String, nullable=False, index=True)
+    page = Column(String, nullable=True)
+    metadata_ = Column("metadata", JSON, nullable=True)  # non-sensitive context only
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    user = relationship("User", back_populates="events")
+
+    __table_args__ = (
+        # Composite index for the most common analytics query patterns:
+        # - events by user in time range
+        # - count of event_type per day/week/month
+        Index("ix_user_events_user_created", "user_id", "created_at"),
+        Index("ix_user_events_type_created", "event_type", "created_at"),
+    )
