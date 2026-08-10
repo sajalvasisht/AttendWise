@@ -54,9 +54,31 @@ def test_attendance_initialized_state(db_session):
     db_session.add(semester)
     db_session.commit()
 
-    # Subject initialized with conducted=10, attended=8 (80%)
-    subject = Subject(semester_id=semester.id, name="Maths", code="MATH101", initial_conducted=10, initial_attended=8, min_attendance_percent=75.0)
+    subject = Subject(semester_id=semester.id, name="Maths", code="MATH101", min_attendance_percent=75.0)
     db_session.add(subject)
+    db_session.commit()
+
+    # Create 10 historical lecture occurrences: 8 present, 2 absent (conducted=10, attended=8 -> 80.0%)
+    occs = []
+    for i in range(1, 9):
+        occs.append(LectureOccurrence(
+            semester_id=semester.id,
+            subject_id=subject.id,
+            date=date(2026, 1, i),
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+            attendance_status="present"
+        ))
+    for i in range(9, 11):
+        occs.append(LectureOccurrence(
+            semester_id=semester.id,
+            subject_id=subject.id,
+            date=date(2026, 1, i),
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+            attendance_status="absent"
+        ))
+    db_session.add_all(occs)
     db_session.commit()
 
     stats = calculate_subject_statistics(db_session, semester.id, subject)
@@ -67,7 +89,7 @@ def test_attendance_initialized_state(db_session):
     # safe_bunks = floor(8 - 0.75 * 10) = floor(8 - 7.5) = floor(0.5) = 0
     assert stats["safe_bunks"] == 0
 
-    # Let's add 2 present occurrences
+    # Add 2 more present occurrences
     occ1 = LectureOccurrence(semester_id=semester.id, subject_id=subject.id, date=date(2026, 2, 1), start_time=time(9,0), end_time=time(10,0), attendance_status="present")
     occ2 = LectureOccurrence(semester_id=semester.id, subject_id=subject.id, date=date(2026, 2, 2), start_time=time(9,0), end_time=time(10,0), attendance_status="present")
     db_session.add_all([occ1, occ2])
@@ -79,6 +101,7 @@ def test_attendance_initialized_state(db_session):
     # safe_bunks = floor(10 - 0.75 * 12) = floor(10 - 9) = 1
     assert stats2["safe_bunks"] == 1
     assert stats2["attendance_percent"] == 83.33
+
 
 def test_sync_subject_past_occurrences(db_session):
     from app.services.attendance_engine import sync_subject_past_occurrences

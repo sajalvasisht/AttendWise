@@ -16,6 +16,8 @@ class Settings:
     # Auth & OAuth Security
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
+
     
     # Mailing SMTP configuration
     MAIL_USERNAME: str = os.getenv("MAIL_USERNAME", "")

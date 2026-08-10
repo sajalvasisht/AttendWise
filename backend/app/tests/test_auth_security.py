@@ -147,3 +147,48 @@ def test_password_forgot_and_reset_flow(client, db_session):
     })
     assert login_res.status_code == 200
     assert "access_token" in login_res.json()
+
+
+def test_analytics_overview_admin_authorization(client, db_session):
+    from unittest.mock import patch
+    from app.core.security import get_password_hash, create_access_token
+
+    # 1. Create ordinary user and admin user
+    ordinary_user = User(
+        email="student@attendwise.com",
+        password_hash=get_password_hash("password123"),
+        full_name="Student User",
+        is_verified=True
+    )
+
+    admin_user = User(
+        email="admin@attendwise.com",
+        password_hash=get_password_hash("adminpassword123"),
+        full_name="Admin User",
+        is_verified=True
+    )
+    db_session.add_all([ordinary_user, admin_user])
+    db_session.commit()
+
+    token_ordinary = create_access_token(subject=ordinary_user.id)
+    token_admin = create_access_token(subject=admin_user.id)
+
+    with patch("app.core.config.settings.ADMIN_EMAIL", "admin@attendwise.com"):
+        # Ordinary user should get 403 Forbidden
+        res_non_admin = client.get(
+            "/api/v1/analytics/overview",
+            headers={"Authorization": f"Bearer {token_ordinary}"}
+        )
+        assert res_non_admin.status_code == 403
+        assert "Administrator privileges required" in res_non_admin.json()["detail"]
+
+        # Admin user should get 200 OK
+        res_admin = client.get(
+            "/api/v1/analytics/overview",
+            headers={"Authorization": f"Bearer {token_admin}"}
+        )
+        assert res_admin.status_code == 200
+        data = res_admin.json()
+        assert "registered_users" in data
+        assert "daily_active_users" in data
+

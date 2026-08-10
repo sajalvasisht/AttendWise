@@ -10,15 +10,17 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# Set up CORS middleware
-# In production, specify exact origins instead of ["*"]
+# Set up CORS middleware restricted to configured FRONTEND_URL origins
+origins = [o.strip() for o in settings.FRONTEND_URL.split(",") if o.strip()] if settings.FRONTEND_URL else ["http://localhost:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

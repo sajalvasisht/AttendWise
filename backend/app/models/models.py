@@ -151,9 +151,10 @@ class UserEvent(Base):
     event_type = Column(String, nullable=False, index=True)
     page = Column(String, nullable=True)
     metadata_ = Column("metadata", JSON, nullable=True)  # non-sensitive context only
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
     user = relationship("User", back_populates="events")
+
 
     __table_args__ = (
         # Composite index for the most common analytics query patterns:

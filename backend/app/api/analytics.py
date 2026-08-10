@@ -21,7 +21,7 @@ Metrics returned:
     feedbacks_submitted   — all-time FEEDBACK_SUBMITTED event count
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
 from datetime import datetime, timedelta, timezone
@@ -30,6 +30,7 @@ from typing import Any
 from app.database.session import get_db
 from app.models.models import User, UserEvent
 from app.api.deps import get_current_user
+from app.core.config import settings
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -64,11 +65,17 @@ def get_analytics_overview(
 ) -> Any:
     """Return aggregate product metrics for the AttendWise Beta admin.
 
-    Active User windows:
-    - Daily  = LOGIN events since midnight today (UTC)
-    - Weekly = LOGIN events in the last 7 calendar days
-    - Monthly = LOGIN events in the last 30 calendar days
+    Access is restricted exclusively to the configured ADMIN_EMAIL.
     """
+    configured_admin = (settings.ADMIN_EMAIL or "").strip().lower()
+    user_email = (current_user.email or "").strip().lower()
+
+    if not configured_admin or user_email != configured_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Administrator privileges required."
+        )
+
     now = datetime.now(timezone.utc)
     today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
     seven_days_ago = now - timedelta(days=7)
