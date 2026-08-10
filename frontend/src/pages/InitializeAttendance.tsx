@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { subjectService } from "../services/subject";
 import type { Subject } from "../services/subject";
+import { semesterService } from "../services/semester";
 import { attendanceService } from "../services/attendance";
+
 import { Loader2, BookOpen, Info, ShieldAlert, CheckCircle2 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { motion } from "framer-motion";
@@ -48,12 +50,12 @@ const InitializeAttendance: React.FC = () => {
 
   const fetchSemesterAndSubjects = async () => {
     try {
-      const res = await apiGetSemesters();
+      const res = await semesterService.list();
       if (res.length === 0) {
         navigate("/setup");
         return;
       }
-      const sem = res[0];
+      const sem = res.find(s => s.is_active) || res[0];
       setSemesterId(sem.id);
       
       const subList = await subjectService.list(sem.id);
@@ -75,10 +77,6 @@ const InitializeAttendance: React.FC = () => {
     }
   };
 
-  const apiGetSemesters = async () => {
-    const response = await import("../services/api").then((m) => m.default.get("/semesters"));
-    return response.data;
-  };
 
   useEffect(() => {
     fetchSemesterAndSubjects();

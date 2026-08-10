@@ -23,16 +23,20 @@ const AttendanceSummary: React.FC = () => {
           return;
         }
         
-        const activeSem = sems[0];
+        const activeSem = sems.find(s => s.is_active) || sems[0];
         
-        // Fetch stats parallelly
-        const [overallData, subjectsData] = await Promise.all([
+        // Fetch stats in parallel with Promise.allSettled for maximum resilience
+        const [overallRes, subjectsRes] = await Promise.allSettled([
           attendanceService.getSummary(activeSem.id),
           attendanceService.getSubjectsAttendance(activeSem.id)
         ]);
         
-        setOverall(overallData);
-        setSubjects(subjectsData);
+        if (overallRes.status === "fulfilled") {
+          setOverall(overallRes.value);
+        }
+        if (subjectsRes.status === "fulfilled") {
+          setSubjects(subjectsRes.value);
+        }
       } catch (err) {
         console.error("Failed to load attendance summary details:", err);
         setError("Error compiling attendance calculations.");
@@ -42,6 +46,7 @@ const AttendanceSummary: React.FC = () => {
     };
     fetchSummaryData();
   }, [navigate]);
+
 
   return (
     <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased selection:bg-emerald-100 selection:text-emerald-950 flex flex-col font-sans">

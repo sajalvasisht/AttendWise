@@ -55,13 +55,17 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose })
       const sems = await semesterService.list();
       const active = sems.find((s) => s.is_active) || sems[sems.length - 1];
       if (active) {
-        // Load data in parallel
-        const [subjs, evs] = await Promise.all([
+        // Load data in parallel with Promise.allSettled
+        const [subjsRes, evsRes] = await Promise.allSettled([
           subjectService.list(active.id),
           calendarService.list(active.id),
         ]);
-        setSubjects(subjs);
-        setEvents(evs);
+        if (subjsRes.status === "fulfilled") {
+          setSubjects(subjsRes.value);
+        }
+        if (evsRes.status === "fulfilled") {
+          setEvents(evsRes.value);
+        }
       }
     } catch (err) {
       console.error("Failed to load search index pool:", err);
@@ -69,6 +73,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose })
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     if (!query.trim()) {

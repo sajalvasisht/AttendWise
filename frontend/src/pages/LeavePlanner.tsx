@@ -46,22 +46,34 @@ const LeavePlanner: React.FC = () => {
   const [dateFocused, setDateFocused] = useState(false);
   const [dateHovered, setDateHovered] = useState(false);
 
-  // Load semester on mount
+  // Load semester and data on mount
   useEffect(() => {
     const fetchSemester = async () => {
       try {
         const sems = await semesterService.list();
         if (sems.length === 0) {
           navigate("/setup");
-        } else {
-          const activeSem = sems.find(s => s.is_active) || sems[0];
-          setSemester(activeSem);
-          const subjs = await subjectService.list(activeSem.id);
-          setHasSubjects(subjs.length > 0);
-          fetchCalendarEvents(activeSem.id);
+          return;
+        }
+
+        const activeSem = sems.find(s => s.is_active) || sems[0];
+        setSemester(activeSem);
+
+        // Fetch subjects and calendar exceptions in parallel
+        const [subjsRes, eventsRes] = await Promise.allSettled([
+          subjectService.list(activeSem.id),
+          calendarService.list(activeSem.id)
+        ]);
+
+        if (subjsRes.status === "fulfilled") {
+          setHasSubjects(subjsRes.value.length > 0);
+        }
+
+        if (eventsRes.status === "fulfilled") {
+          setAllEvents(eventsRes.value);
         }
       } catch (err) {
-        console.error("Failed to load semesters", err);
+        console.error("Failed to load semester data", err);
         setError("Could not load your semester data.");
       } finally {
         setInitialLoading(false);
@@ -70,16 +82,9 @@ const LeavePlanner: React.FC = () => {
     fetchSemester();
   }, [navigate]);
 
-  const fetchCalendarEvents = async (semId: number) => {
-    try {
-      const evs = await calendarService.list(semId);
-      setAllEvents(evs);
-    } catch (err) {
-      console.error("Failed to load calendar events", err);
-    }
-  };
 
   // Add date to list
+
   const handleAddDate = () => {
     if (!selectedDate) return;
     if (datesList.includes(selectedDate)) {

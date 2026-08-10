@@ -14,8 +14,10 @@ import type { CalendarEvent } from "../services/calendar";
 import { aiService } from "../services/ai";
 import { timetableService } from "../services/timetable";
 import { subjectService } from "../services/subject";
+import { plannerService } from "../services/planner";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../hooks/useAuth";
+
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -92,64 +94,77 @@ const Dashboard: React.FC = () => {
       const activeSem = sems.find(s => s.is_active) || sems[0];
       setSemester(activeSem);
 
-      // Fetch stats, schedules and suggestions
-      const [subjsData, todayData, allEvents, summaryData] = await Promise.all([
+      // Fetch primary dashboard stats and schedules in parallel using Promise.allSettled for maximum resilience
+      const [subjsRes, todayRes, eventsRes, summaryRes] = await Promise.allSettled([
         attendanceService.getSubjectsAttendance(activeSem.id),
         attendanceService.getToday(activeSem.id),
         calendarService.list(activeSem.id),
         attendanceService.getSummary(activeSem.id)
       ]);
 
-      setOverallStats(summaryData);
-
-      const todayStr = new Date().toLocaleDateString("en-CA");
-      const todayEvs = allEvents.filter(e => e.date === todayStr);
-      
-      const examEv = todayEvs.find(e => e.event_type === "exam_day" || e.event_type === "exam");
-      const holidayEv = todayEvs.find(e => ["holiday", "college_closure", "exam_break"].includes(e.event_type));
-      
-      setTodayExam(examEv || null);
-      setTodayHoliday(holidayEv || null);
-
-      // Next Holiday
-      const upcomingHolidays = allEvents
-        .filter(e => e.date >= todayStr && ["holiday", "college_closure", "exam_break"].includes(e.event_type))
-        .sort((a, b) => a.date.localeCompare(b.date));
-      
-      if (upcomingHolidays.length > 0) {
-        setNextHoliday(upcomingHolidays[0]);
+      if (summaryRes.status === "fulfilled") {
+        setOverallStats(summaryRes.value);
       }
 
-      // Assessments
-      const assessments = allEvents
-        .filter(e => e.date >= todayStr && ["exam_day", "exam", "assessment"].includes(e.event_type.toLowerCase()))
-        .sort((a, b) => a.date.localeCompare(b.date));
-      setUpcomingAssessments(assessments.slice(0, 3));
-
-      // Planner Suggestions
-      try {
-        const suggestions = await import("../services/planner").then((m) => m.plannerService.getSuggestions(activeSem.id));
-        setPlannerSuggestions(suggestions.slice(0, 2));
-      } catch (e) {
-        console.error("Planner suggestions error", e);
+      if (todayRes.status === "fulfilled") {
+        setTodayLectures(todayRes.value);
       }
 
-      // Sort subject cards
-      const sortedSubjects = [...subjsData].sort((a, b) => {
-        const getPriority = (s: SubjectAttendanceStats) => {
-          if (s.attendance_percent < s.min_attendance_percent) return 1;
-          if (s.safe_bunks === 0) return 2;
-          return 3;
-        };
-        return getPriority(a) - getPriority(b);
-      });
+      if (eventsRes.status === "fulfilled") {
+        const allEvents = eventsRes.value;
+        const todayStr = new Date().toLocaleDateString("en-CA");
+        const todayEvs = allEvents.filter(e => e.date === todayStr);
+        
+        const examEv = todayEvs.find(e => e.event_type === "exam_day" || e.event_type === "exam");
+        const holidayEv = todayEvs.find(e => ["holiday", "college_closure", "exam_break"].includes(e.event_type));
+        
+        setTodayExam(examEv || null);
+        setTodayHoliday(holidayEv || null);
 
-      setSubjects(sortedSubjects);
-      setTodayLectures(todayData);
+        // Next Holiday
+        const upcomingHolidays = allEvents
+          .filter(e => e.date >= todayStr && ["holiday", "college_closure", "exam_break"].includes(e.event_type))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        
+        if (upcomingHolidays.length > 0) {
+          setNextHoliday(upcomingHolidays[0]);
+        }
+
+        // Assessments
+        const assessments = allEvents
+          .filter(e => e.date >= todayStr && ["exam_day", "exam", "assessment"].includes(e.event_type.toLowerCase()))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        setUpcomingAssessments(assessments.slice(0, 3));
+      }
+
+      if (subjsRes.status === "fulfilled") {
+        const subjsData = subjsRes.value;
+        const sortedSubjects = [...subjsData].sort((a, b) => {
+          const getPriority = (s: SubjectAttendanceStats) => {
+            if (s.attendance_percent < s.min_attendance_percent) return 1;
+            if (s.safe_bunks === 0) return 2;
+            return 3;
+          };
+          return getPriority(a) - getPriority(b);
+        });
+        setSubjects(sortedSubjects);
+      }
+
+      // Unblock page render immediately
+      setLoading(false);
+
+      // Fetch non-critical planner suggestions asynchronously in the background so it never delays UI rendering
+      plannerService.getSuggestions(activeSem.id)
+        .then((suggestions) => {
+          setPlannerSuggestions(suggestions.slice(0, 2));
+        })
+        .catch((e) => {
+          console.warn("Non-blocking planner suggestions note:", e);
+        });
+
     } catch (err) {
       console.error("Error fetching dashboard statistics:", err);
       setError("Error loading workspace data.");
-    } finally {
       setLoading(false);
     }
   };
@@ -169,20 +184,26 @@ const Dashboard: React.FC = () => {
         prev.map(occ => occ.id === occurrenceId ? { ...occ, attendance_status: updated.attendance_status } : occ)
       );
 
-      const [subjsData, newSummary] = await Promise.all([
+      const [subjsRes, summaryRes] = await Promise.allSettled([
         attendanceService.getSubjectsAttendance(semester.id),
         attendanceService.getSummary(semester.id)
       ]);
-      const sortedSubjects = [...subjsData].sort((a, b) => {
-        const getPriority = (s: SubjectAttendanceStats) => {
-          if (s.attendance_percent < s.min_attendance_percent) return 1;
-          if (s.safe_bunks === 0) return 2;
-          return 3;
-        };
-        return getPriority(a) - getPriority(b);
-      });
-      setSubjects(sortedSubjects);
-      setOverallStats(newSummary);
+
+      if (subjsRes.status === "fulfilled") {
+        const sortedSubjects = [...subjsRes.value].sort((a, b) => {
+          const getPriority = (s: SubjectAttendanceStats) => {
+            if (s.attendance_percent < s.min_attendance_percent) return 1;
+            if (s.safe_bunks === 0) return 2;
+            return 3;
+          };
+          return getPriority(a) - getPriority(b);
+        });
+        setSubjects(sortedSubjects);
+      }
+
+      if (summaryRes.status === "fulfilled") {
+        setOverallStats(summaryRes.value);
+      }
 
     } catch (err) {
       console.error("Failed to update status", err);
@@ -191,6 +212,7 @@ const Dashboard: React.FC = () => {
       setUpdatingId(null);
     }
   };
+
 
   const handleRestartSetup = async () => {
     if (!semester) return;
