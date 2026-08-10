@@ -124,6 +124,12 @@ def submit_feedback(
 ) -> Any:
     """Log user feedback submission without storing sensitive details."""
     cat = feedback_in.category if feedback_in else "general"
-    analytics.log_event(db, current_user, "FEEDBACK_SUBMITTED", page="feedback",
-                        meta={"category": cat})
+    analytics.log_event(
+        db=db,
+        user=current_user,
+        event="FEEDBACK_SUBMITTED",
+        page="feedback",
+        metadata={"category": cat}
+    )
     return {"status": "success", "message": "Feedback recorded. Thank you!"}
+

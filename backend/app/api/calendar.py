@@ -69,8 +69,14 @@ def save_calendar_events(
         generate_occurrences(db, semester_id, start_from_date=semester.start_date)
 
     # Log calendar import event
-    analytics.log_event(db, current_user, "IMPORT_CALENDAR", page="calendar",
-                        meta={"event_count": len(new_events), "mode": mode})
+    analytics.log_event(
+        db=db,
+        user=current_user,
+        event="IMPORT_CALENDAR",
+        page="calendar",
+        metadata={"event_count": len(new_events), "mode": mode}
+    )
 
     # Fetch and return the newly saved events
     return db.query(CalendarEvent).filter(CalendarEvent.semester_id == semester_id).all()
+

@@ -93,10 +93,16 @@ def update_occurrence_status(
     db.refresh(occurrence)
 
     # Log attendance marking event (without sensitive content)
-    analytics.log_event(db, current_user, "MARK_ATTENDANCE", page="tracker",
-                        meta={"status": status_lower})
+    analytics.log_event(
+        db=db,
+        user=current_user,
+        event="MARK_ATTENDANCE",
+        page="tracker",
+        metadata={"status": status_lower}
+    )
 
     return occurrence
+
 
 
 @router.get("/summary", response_model=OverallAttendanceStats)
@@ -208,7 +214,13 @@ def initialize_attendance(
     db.commit()
 
     # Log setup completed event
-    analytics.log_event(db, current_user, "SETUP_COMPLETED", page="initialize_attendance",
-                        meta={"subjects_initialized": len(init_in.initializations)})
+    analytics.log_event(
+        db=db,
+        user=current_user,
+        event="SETUP_COMPLETED",
+        page="initialize_attendance",
+        metadata={"subjects_initialized": len(init_in.initializations)}
+    )
 
     return {"message": "Attendance successfully initialized"}
+

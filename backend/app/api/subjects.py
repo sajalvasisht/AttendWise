@@ -70,9 +70,15 @@ def create_subject(
     db.add(db_subject)
     db.commit()
     db.refresh(db_subject)
-    analytics.log_event(db, current_user, "SUBJECT_CREATED", page="subjects",
-                        meta={"subject_name": subject_in.name, "track": track_attr})
+    analytics.log_event(
+        db=db,
+        user=current_user,
+        event="SUBJECT_CREATED",
+        page="subjects",
+        metadata={"subject_name": subject_in.name, "track": track_attr}
+    )
     return db_subject
+
 
 @router.get("", response_model=List[SubjectResponse])
 def read_subjects(

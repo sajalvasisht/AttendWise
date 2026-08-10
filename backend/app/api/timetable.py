@@ -66,8 +66,14 @@ def save_timetable_slots(
         generate_occurrences(db, semester_id, start_from_date=semester.start_date)
 
     # Log timetable import event
-    analytics.log_event(db, current_user, "IMPORT_TIMETABLE", page="timetable",
-                        meta={"slot_count": len(new_slots), "mode": mode})
+    analytics.log_event(
+        db=db,
+        user=current_user,
+        event="IMPORT_TIMETABLE",
+        page="timetable",
+        metadata={"slot_count": len(new_slots), "mode": mode}
+    )
 
     # Fetch and return the newly saved slots
     return db.query(TimetableSlot).filter(TimetableSlot.semester_id == semester_id).all()
+

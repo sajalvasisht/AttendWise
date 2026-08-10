@@ -118,7 +118,13 @@ def assistant_chat(
     response = process_assistant_message(db, semester.id, chat_in.message, current_date)
 
     # Log AI query event (privacy-safe: intent only, no prompt text)
-    analytics.log_event(db, current_user, "AI_QUERY", page="ai_assistant",
-                        meta={"intent": getattr(response, "intent", "unknown") if hasattr(response, "intent") else "query"})
+    analytics.log_event(
+        db=db,
+        user=current_user,
+        event="AI_QUERY",
+        page="ai_assistant",
+        metadata={"intent": getattr(response, "intent", "unknown") if hasattr(response, "intent") else "query"}
+    )
 
     return response
+

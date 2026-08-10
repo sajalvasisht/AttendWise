@@ -72,12 +72,21 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
     token = create_access_token(subject=user.id)
-    analytics.log_login(db, user)  # updates last_login_at + logs LOGIN event
+    analytics.log_event(
+        db=db,
+        user=user,
+        event="LOGIN",
+        page="login",
+        metadata=None
+    )
     return {
         "access_token": token,
         "token_type": "bearer",
     }
+
 
 @router.post("/google", response_model=Token)
 def google_auth(request: GoogleLoginRequest, db: Session = Depends(get_db)) -> Any:
@@ -113,12 +122,21 @@ def google_auth(request: GoogleLoginRequest, db: Session = Depends(get_db)) -> A
         db.commit()
         db.refresh(user)
 
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
     token = create_access_token(subject=user.id)
-    analytics.log_login(db, user)  # updates last_login_at + logs LOGIN event
+    analytics.log_event(
+        db=db,
+        user=user,
+        event="LOGIN",
+        page="login",
+        metadata=None
+    )
     return {
         "access_token": token,
         "token_type": "bearer",
     }
+
 
 @router.post("/verify-email")
 def verify_email(request: VerifyEmailRequest, db: Session = Depends(get_db)) -> Any:
