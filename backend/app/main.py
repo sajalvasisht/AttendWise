@@ -31,3 +31,11 @@ def read_root():
         "status": "healthy",
         "version": "1.0.0"
     }
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "source": "AttendWise FastAPI",
+        "test": "deployment-check"
+    }
