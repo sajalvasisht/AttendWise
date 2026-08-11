@@ -76,43 +76,46 @@ const DailyTracker: React.FC = () => {
     fetchEvents();
   }, [semester]);
 
-  // Load month occurrences whenever viewing month or active semester changes
+  // Load month occurrences and day occurrences in parallel using Promise.allSettled
   useEffect(() => {
     if (!semester) return;
-    const fetchMonthData = async () => {
+    const fetchAttendanceData = async () => {
+      setLoading(true);
+      setError(null);
+
       const year = currentMonth.getFullYear();
       const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
       const lastDay = new Date(year, currentMonth.getMonth() + 1, 0).getDate();
       const startStr = `${year}-${month}-01`;
       const endStr = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
-      try {
-        const data = await attendanceService.getByRange(semester.id, startStr, endStr);
-        setMonthOccurrences(data);
-      } catch (err) {
-        console.error("Failed to load month range data:", err);
-      }
-    };
-    fetchMonthData();
-  }, [semester, currentMonth]);
 
-  // Load occurrences whenever selected date or semester changes
-  useEffect(() => {
-    if (!semester) return;
-    const fetchOccurrences = async () => {
-      setLoading(true);
-      setError(null);
       try {
-        const data = await attendanceService.getByDate(semester.id, selectedDate);
-        setOccurrences(data);
+        const [monthRes, dayRes] = await Promise.allSettled([
+          attendanceService.getByRange(semester.id, startStr, endStr),
+          attendanceService.getByDate(semester.id, selectedDate)
+        ]);
+
+        if (monthRes.status === "fulfilled") {
+          setMonthOccurrences(monthRes.value);
+        } else {
+          console.error("Failed to load month range data:", monthRes.reason);
+        }
+
+        if (dayRes.status === "fulfilled") {
+          setOccurrences(dayRes.value);
+        } else {
+          console.error("Failed to load lectures:", dayRes.reason);
+          setError("Error fetching class list for the selected date.");
+        }
       } catch (err) {
-        console.error("Failed to load lectures", err);
-        setError("Error fetching class list for the selected date.");
+        console.error("Failed to load attendance data", err);
+        setError("Error fetching attendance data.");
       } finally {
         setLoading(false);
       }
     };
-    fetchOccurrences();
-  }, [semester, selectedDate]);
+    fetchAttendanceData();
+  }, [semester, currentMonth, selectedDate]);
 
   // Quick navigation for dates (Prev Day / Next Day)
   const adjustDate = (days: number) => {

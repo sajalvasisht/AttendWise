@@ -70,21 +70,21 @@ def map_raw_calendar(raw_data: Dict[str, Any]) -> ExtractedCalendarReview:
         category = "Other"
         schedule_effect = "KEEP_LECTURES"
 
-        if "holiday" in name_lower or "vacation" in name_lower or "break" in name_lower:
-            category = "Holiday"
-            schedule_effect = "REPLACE_LECTURES"
-        elif "closure" in name_lower or "closed" in name_lower:
-            category = "College Closure"
-            schedule_effect = "REPLACE_LECTURES"
-        elif "working" in name_lower or "override" in name_lower:
+        if re.search(r"\b(working|override)\b", name_lower):
             category = "Working Day Override"
             schedule_effect = "OVERRIDE_TIMETABLE"
-        elif any(k in name_lower for k in ["sessional", "midterm", "mid semester", "mid sem", "exam", "sessional exam"]):
-            category = "Assessment"
+        elif re.search(r"\b(holiday|vacation|break)\b", name_lower):
+            category = "Holiday"
             schedule_effect = "REPLACE_LECTURES"
-        elif any(k in name_lower for k in ["formative", "quiz", "quiz day"]):
+        elif re.search(r"\b(closure|closed)\b", name_lower):
+            category = "College Closure"
+            schedule_effect = "REPLACE_LECTURES"
+        elif re.search(r"\b(fa|final assessment|ce|continuous evaluation|quiz|quiz day|formative)\b", name_lower):
             category = "Assessment"
             schedule_effect = "KEEP_LECTURES"
+        elif re.search(r"\b(st|sessional test|sessional|exam|midterm|mid semester|mid sem|sessional exam)\b", name_lower):
+            category = "Assessment"
+            schedule_effect = "REPLACE_LECTURES"
 
         events.append(
             ExtractedCalendarEventReview(

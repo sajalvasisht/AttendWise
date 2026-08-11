@@ -124,13 +124,13 @@ const SetupWizard: React.FC = () => {
 
   const loadSemesterData = async (semId: number) => {
     try {
-      const subjs = await subjectService.list(semId);
+      const [subjs, slots, evs] = await Promise.all([
+        subjectService.list(semId),
+        timetableService.list(semId),
+        calendarService.list(semId),
+      ]);
       setSubjects(subjs);
-      
-      const slots = await timetableService.list(semId);
       setTimetableSlots(slots);
-      
-      const evs = await calendarService.list(semId);
       setCalendarEvents(evs);
     } catch (err) {
       console.error("Error loading sub-resources:", err);
@@ -181,13 +181,17 @@ const SetupWizard: React.FC = () => {
       
       const mappedEvents = response.events.map(ev => {
         let mappedType = "holiday";
-        const cat = ev.category.toLowerCase();
+        let defaultEffect = ev.schedule_effect;
+        const cat = (ev.category || "").toLowerCase();
         if (cat.includes("holiday")) mappedType = "holiday";
         else if (cat.includes("closure") || cat.includes("closed")) mappedType = "college_closure";
         else if (cat.includes("override")) mappedType = "working_day_override";
-        else if (cat.includes("assessment")) mappedType = "exam_day";
         else if (cat.includes("break")) mappedType = "exam_break";
-        
+        else if (cat === "st" || cat.includes("sessional")) { mappedType = "ST"; defaultEffect = ev.schedule_effect || "REPLACE_LECTURES"; }
+        else if (cat === "fa" || cat.includes("final assessment")) { mappedType = "FA"; defaultEffect = ev.schedule_effect || "KEEP_LECTURES"; }
+        else if (cat === "ce" || cat.includes("continuous evaluation")) { mappedType = "CE"; defaultEffect = ev.schedule_effect || "KEEP_LECTURES"; }
+        else if (cat.includes("assessment") || cat.includes("exam")) mappedType = "exam_day";
+
         let mappedSubjId: number | undefined = undefined;
         if (ev.subject_name || ev.subject_code) {
           const matched = subjects.find(s => 
@@ -200,7 +204,7 @@ const SetupWizard: React.FC = () => {
         return {
           title: ev.title,
           category: ev.category,
-          schedule_effect: ev.schedule_effect,
+          schedule_effect: defaultEffect || ev.schedule_effect,
           date: ev.date,
           end_date: ev.end_date || undefined,
           event_type: mappedType,
@@ -239,12 +243,19 @@ const SetupWizard: React.FC = () => {
           if (field === "category") {
             const cat = value.toLowerCase();
             let mappedType = "holiday";
-            if (cat.includes("holiday")) mappedType = "holiday";
-            else if (cat.includes("closure") || cat.includes("closed")) mappedType = "college_closure";
-            else if (cat.includes("override")) mappedType = "working_day_override";
-            else if (cat.includes("assessment")) mappedType = "exam_day";
-            else if (cat.includes("break")) mappedType = "exam_break";
+            let defaultEffect = "REPLACE_LECTURES";
+            if (cat.includes("holiday")) { mappedType = "holiday"; defaultEffect = "REPLACE_LECTURES"; }
+            else if (cat.includes("closure") || cat.includes("closed")) { mappedType = "college_closure"; defaultEffect = "REPLACE_LECTURES"; }
+            else if (cat.includes("override")) { mappedType = "working_day_override"; defaultEffect = "OVERRIDE_TIMETABLE"; }
+            else if (cat === "st" || cat.includes("sessional")) { mappedType = "ST"; defaultEffect = "REPLACE_LECTURES"; }
+            else if (cat === "fa" || cat.includes("final assessment")) { mappedType = "FA"; defaultEffect = "KEEP_LECTURES"; }
+            else if (cat === "ce" || cat.includes("continuous evaluation")) { mappedType = "CE"; defaultEffect = "KEEP_LECTURES"; }
+            else if (cat.includes("assessment")) { mappedType = "exam_day"; defaultEffect = "REPLACE_LECTURES"; }
+            else if (cat.includes("break")) { mappedType = "exam_break"; defaultEffect = "REPLACE_LECTURES"; }
             updated.event_type = mappedType;
+            if (!event.schedule_effect) {
+              updated.schedule_effect = defaultEffect;
+            }
           }
           return updated;
         }
@@ -323,49 +334,49 @@ const SetupWizard: React.FC = () => {
           }
         }
 
-        const createdSubjects: Subject[] = [];
-        for (const es of uniqueExtracted) {
-          try {
-            // Find all slots matching this subject
-            const matchingSlots = extractedSlots.filter(slot =>
-              slot.subject_name.toLowerCase() === es.name.toLowerCase() ||
-              (slot.subject_code && es.code && es.code.toLowerCase() === slot.subject_code.toLowerCase())
-            );
+        const createdSubjectsResults = await Promise.all(
+          uniqueExtracted.map(async (es) => {
+            try {
+              // Find all slots matching this subject
+              const matchingSlots = extractedSlots.filter(slot =>
+                slot.subject_name.toLowerCase() === es.name.toLowerCase() ||
+                (slot.subject_code && es.code && es.code.toLowerCase() === slot.subject_code.toLowerCase())
+              );
 
-            let calculatedUnits = 1;
-            const nameLower = es.name.toLowerCase();
-            if (nameLower.includes("lab") || nameLower.includes("2-hour") || nameLower.includes("2 hour") || nameLower.includes("2hr")) {
-              calculatedUnits = 2;
-            }
-
-            if (matchingSlots.length > 0) {
-              const firstSlot = matchingSlots[0];
-              const [sh, sm] = firstSlot.start_time.split(":").map(Number);
-              const [eh, em] = firstSlot.end_time.split(":").map(Number);
-              const duration = (eh * 60 + em) - (sh * 60 + sm);
-              if (duration === 60) {
-                calculatedUnits = 1;
-              } else if (duration === 120) {
+              let calculatedUnits = 1;
+              const nameLower = es.name.toLowerCase();
+              if (nameLower.includes("lab") || nameLower.includes("2-hour") || nameLower.includes("2 hour") || nameLower.includes("2hr")) {
                 calculatedUnits = 2;
-              } else if (duration === 180) {
-                calculatedUnits = 3;
               }
-            }
 
-            const added = await subjectService.create(semester.id, {
-              name: es.name,
-              code: es.code || undefined,
-              faculty: undefined,
-              min_attendance_percent: es.min_attendance_percent,
-              units_per_class: calculatedUnits,
-            });
-            if (!createdSubjects.some(cs => cs.id === added.id)) {
-              createdSubjects.push(added);
+              if (matchingSlots.length > 0) {
+                const firstSlot = matchingSlots[0];
+                const [sh, sm] = firstSlot.start_time.split(":").map(Number);
+                const [eh, em] = firstSlot.end_time.split(":").map(Number);
+                const duration = (eh * 60 + em) - (sh * 60 + sm);
+                if (duration === 60) {
+                  calculatedUnits = 1;
+                } else if (duration === 120) {
+                  calculatedUnits = 2;
+                } else if (duration === 180) {
+                  calculatedUnits = 3;
+                }
+              }
+
+              return await subjectService.create(semester.id, {
+                name: es.name,
+                code: es.code || undefined,
+                faculty: undefined,
+                min_attendance_percent: es.min_attendance_percent,
+                units_per_class: calculatedUnits,
+              });
+            } catch (subjErr) {
+              console.error("Failed to auto-create subject", es.name, subjErr);
+              return null;
             }
-          } catch (subjErr) {
-            console.error("Failed to auto-create subject", es.name, subjErr);
-          }
-        }
+          })
+        );
+        const createdSubjects = createdSubjectsResults.filter((s): s is Subject => s !== null);
         setSubjects(createdSubjects);
 
         
@@ -590,17 +601,15 @@ const SetupWizard: React.FC = () => {
     setLoading(true);
 
     try {
-      // Save timetable slots in batch
-      await timetableService.save(semester.id, timetableSlots.map(slot => ({
+      const mappedSlots = timetableSlots.map(slot => ({
         subject_id: slot.subject_id,
         day_of_week: slot.day_of_week,
         start_time: slot.start_time,
         end_time: slot.end_time,
         room: slot.room
-      })));
+      }));
 
-      // Save calendar events in batch
-      await calendarService.save(semester.id, calendarEvents.map(event => ({
+      const eventsPayload = calendarEvents.map(event => ({
         date: event.date,
         event_type: event.event_type,
         description: event.description,
@@ -608,7 +617,12 @@ const SetupWizard: React.FC = () => {
         subject_id: event.subject_id,
         start_time: event.start_time,
         end_time: event.end_time
-      })));
+      }));
+
+      await Promise.all([
+        timetableService.save(semester.id, mappedSlots),
+        calendarService.save(semester.id, eventsPayload)
+      ]);
 
       localStorage.removeItem("setup_step");
       navigate("/setup-complete");
@@ -1487,6 +1501,9 @@ const SetupWizard: React.FC = () => {
                       <option value="college_closure">College Closure</option>
                       <option value="exam_break">Exam Break</option>
                       <option value="exam_day">Exam Day</option>
+                      <option value="ST">ST (Sessional Test)</option>
+                      <option value="FA">FA (Final Assessment)</option>
+                      <option value="CE">CE (Continuous Evaluation)</option>
                     </select>
                   </div>
                 </div>
@@ -1605,6 +1622,9 @@ const SetupWizard: React.FC = () => {
                               <option value="Assessment">Assessment</option>
                               <option value="College Closure">College Closure</option>
                               <option value="Working Day Override">Working Day Override</option>
+                              <option value="ST">ST (Sessional Test)</option>
+                              <option value="FA">FA (Final Assessment)</option>
+                              <option value="CE">CE (Continuous Evaluation)</option>
                               <option value="Other">Other</option>
                             </select>
                           </div>

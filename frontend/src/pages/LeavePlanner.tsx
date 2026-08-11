@@ -10,6 +10,7 @@ import { subjectService } from "../services/subject";
 import {
   Plus, Trash2, Loader2, AlertCircle, CheckCircle2, AlertTriangle, ArrowRight, Compass
 } from "lucide-react";
+
 import Navbar from "../components/Navbar";
 import { motion } from "framer-motion";
 
@@ -62,8 +63,9 @@ const LeavePlanner: React.FC = () => {
         // Fetch subjects and calendar exceptions in parallel
         const [subjsRes, eventsRes] = await Promise.allSettled([
           subjectService.list(activeSem.id),
-          calendarService.list(activeSem.id)
+          calendarService.list(activeSem.id),
         ]);
+
 
         if (subjsRes.status === "fulfilled") {
           setHasSubjects(subjsRes.value.length > 0);
@@ -364,7 +366,7 @@ const LeavePlanner: React.FC = () => {
                               .map((s) => (
                                 <p key={s.subject_id}>
                                   <strong>{s.name}</strong> will fall below required attendance. Attend the next{" "}
-                                  <strong className="underline">{s.required_to_attend}</strong> lectures before taking this leave.
+                                  <strong className="underline">{Math.ceil(s.required_to_attend / (s.units_per_class || 1))}</strong> lectures before taking this leave.
                                 </p>
                               ))}
                           </div>

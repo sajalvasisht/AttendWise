@@ -64,35 +64,34 @@
     --radius: 20px;
 }
 
-/* Force light theme colors on .dark to make app visual layout consistent with login white style */
 .dark {
-    --background: #fcfdfd;
-    --foreground: #0f172a;
+    --background: #090d16;
+    --foreground: #f8fafc;
     
-    --card: #ffffff;
-    --card-foreground: #0f172a;
+    --card: #121826;
+    --card-foreground: #f8fafc;
     
-    --popover: #ffffff;
-    --popover-foreground: #0f172a;
+    --popover: #121826;
+    --popover-foreground: #f8fafc;
     
-    --primary: #0f172a;
-    --primary-foreground: #ffffff;
+    --primary: #f8fafc;
+    --primary-foreground: #090d16;
     
-    --secondary: #f8fafc;
-    --secondary-foreground: #0f172a;
+    --secondary: #1e293b;
+    --secondary-foreground: #f8fafc;
     
-    --muted: #f8fafc;
-    --muted-foreground: #64748b;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
     
-    --accent: #f1f5f9;
-    --accent-foreground: #0f172a;
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
     
     --destructive: #ef4444;
     --destructive-foreground: #ffffff;
     
-    --border: rgba(15, 23, 42, 0.05);
-    --input: rgba(15, 23, 42, 0.05);
-    --ring: #0f172a;
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #38bdf8;
 }
 
 /* Base resets & typography */
@@ -137,6 +136,16 @@ body {
   transform: translateY(-3px);
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.01);
   border-color: rgba(15, 23, 42, 0.1);
+}
+
+.dark .premium-card {
+  background-color: var(--card);
+  border-color: var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dark .premium-card:hover {
+  border-color: #334155;
 }
 
 /* Page Transition Animations */

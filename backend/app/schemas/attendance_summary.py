@@ -12,6 +12,9 @@ class SubjectAttendanceStats(BaseModel):
     cancelled: int
     unmarked: int
     conducted: int
+    raw_attended: int = 0
+    raw_absent: int = 0
+    raw_conducted: int = 0
     attendance_percent: float
     min_attendance_percent: float
     safe_bunks: int

@@ -128,13 +128,13 @@ const ManageSetup: React.FC = () => {
       }
 
       // Fetch children
-      const subjs = await subjectService.list(active.id);
+      const [subjs, slots, events] = await Promise.all([
+        subjectService.list(active.id),
+        timetableService.list(active.id),
+        calendarService.list(active.id),
+      ]);
       setSubjects(subjs);
-
-      const slots = await timetableService.list(active.id);
       setTimetableSlots(slots);
-
-      const events = await calendarService.list(active.id);
       setCalendarEvents(events);
     } catch (err: any) {
       console.error(err);
@@ -440,6 +440,9 @@ const ManageSetup: React.FC = () => {
         if (cat.includes("holiday")) mappedType = "holiday";
         else if (cat.includes("closure")) mappedType = "college_closure";
         else if (cat.includes("override")) mappedType = "working_day_override";
+        else if (cat === "st" || cat.includes("sessional")) mappedType = "ST";
+        else if (cat === "fa" || cat.includes("final assessment")) mappedType = "FA";
+        else if (cat === "ce" || cat.includes("continuous evaluation")) mappedType = "CE";
         else if (cat.includes("exam")) mappedType = "exam_day";
         else if (cat.includes("break")) mappedType = "exam_break";
 
@@ -1224,6 +1227,9 @@ const ManageSetup: React.FC = () => {
                     <option value="exam_day">Examination Session</option>
                     <option value="exam_break">Preparatory Break</option>
                     <option value="working_day_override">Working Day Override</option>
+                    <option value="ST">ST (Sessional Test)</option>
+                    <option value="FA">FA (Final Assessment)</option>
+                    <option value="CE">CE (Continuous Evaluation)</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">

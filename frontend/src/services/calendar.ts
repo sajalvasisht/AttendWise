@@ -11,6 +11,10 @@ export interface CalendarEvent {
   subject_id?: number;
   start_time?: string;
   end_time?: string;
+  title?: string;
+  category?: string;
+  schedule_effect?: string;
+  end_date?: string;
   subject?: Subject;
 }
 

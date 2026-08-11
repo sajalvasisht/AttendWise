@@ -109,6 +109,14 @@ const App: React.FC = () => {
             }
           />
           <Route
+            path="/ai"
+            element={
+              <ProtectedRoute>
+                <AIAssistant />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/initialize-attendance"
             element={
               <ProtectedRoute>

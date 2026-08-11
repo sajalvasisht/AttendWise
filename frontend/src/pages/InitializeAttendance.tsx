@@ -162,6 +162,20 @@ const InitializeAttendance: React.FC = () => {
             </p>
           </div>
 
+          {/* Guidance Banner */}
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 text-xs text-amber-900 flex items-start space-x-3.5 leading-normal shadow-sm">
+            <Info className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+            <div className="space-y-1">
+              <span className="font-extrabold text-amber-950 block">Important Guidance</span>
+              <p>
+                When entering your current attendance, enter your <strong>TOTAL attendance up to the date provided by your college/teacher</strong>.
+              </p>
+              <p className="text-[11px] text-amber-800">
+                The initial session date acts as your starting baseline. Timetable changes are expected over the semester and can be updated at any time in setup settings.
+              </p>
+            </div>
+          </div>
+
           {error && (
             <div className="rounded-2xl border border-red-150 bg-red-50/20 p-4.5 text-xs text-red-650 flex items-start space-x-3 leading-normal font-semibold shadow-[0_1px_3px_rgba(15,23,42,0.01)] animate-fade-in">
               <ShieldAlert className="h-4.5 w-4.5 shrink-0 mt-0.5 text-red-500" />

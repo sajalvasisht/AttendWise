@@ -52,7 +52,11 @@ def save_calendar_events(
                     timetable_day_override=event.timetable_day_override,
                     subject_id=event.subject_id,
                     start_time=event.start_time,
-                    end_time=event.end_time
+                    end_time=event.end_time,
+                    title=event.title,
+                    category=event.category,
+                    schedule_effect=event.schedule_effect,
+                    end_date=event.end_date
                 )
             )
             if mode == "merge":
@@ -79,4 +83,38 @@ def save_calendar_events(
 
     # Fetch and return the newly saved events
     return db.query(CalendarEvent).filter(CalendarEvent.semester_id == semester_id).all()
+
+
+@router.post("/event", response_model=CalendarEventResponse)
+def create_calendar_event(
+    semester_id: int,
+    event_in: CalendarEventCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    verify_active_semester(semester_id, current_user.id, db)
+    event = CalendarEvent(
+        semester_id=semester_id,
+        date=event_in.date,
+        event_type=event_in.event_type,
+        description=event_in.description,
+        timetable_day_override=event_in.timetable_day_override,
+        subject_id=event_in.subject_id,
+        start_time=event_in.start_time,
+        end_time=event_in.end_time,
+        title=event_in.title,
+        category=event_in.category,
+        schedule_effect=event_in.schedule_effect,
+        end_date=event_in.end_date
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+
+    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+    if semester:
+        generate_occurrences(db, semester_id, start_from_date=semester.start_date)
+
+    return event
+
 

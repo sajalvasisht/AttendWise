@@ -66,11 +66,14 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
         "code": subject.code,
         "faculty": subject.faculty,
         "total_lectures": total,
-        "attended": present,
-        "absent": absent,
+        "attended": attended_units,
+        "absent": absent_units,
         "cancelled": cancelled,
         "unmarked": unmarked,
-        "conducted": present + absent,
+        "conducted": conducted_units,
+        "raw_attended": present,
+        "raw_absent": absent,
+        "raw_conducted": present + absent,
         "attendance_percent": percent if is_initialized else 0.0,
         "min_attendance_percent": min_percent,
         "safe_bunks": safe_bunks if is_initialized else 0,
@@ -80,6 +83,7 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
         "units_earned_per_class": subject.units_earned_per_class,
         "units_lost_per_class": subject.units_lost_per_class
     }
+
 
 def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
     raw_subjects = db.query(Subject).filter(Subject.semester_id == semester_id, Subject.track_attendance == True).all()
@@ -94,51 +98,41 @@ def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
 
     subject_stats = []
     total_lectures = 0
-    attended = 0
-    absent = 0
     cancelled = 0
     unmarked = 0
-    conducted = 0
-    
-    conducted_units = 0
-    attended_units = 0
     
     for subject in subjects:
         stats = calculate_subject_statistics(db, semester_id, subject)
         subject_stats.append(stats)
         
         total_lectures += stats["total_lectures"]
-        attended += stats["attended"]
-        absent += stats["absent"]
         cancelled += stats["cancelled"]
         unmarked += stats["unmarked"]
-        conducted += stats["conducted"]
         
-        conducted_units += stats["attended"] * subject.units_earned_per_class + stats["absent"] * subject.units_lost_per_class
-        attended_units += stats["attended"] * subject.units_earned_per_class
+    total_attended_units = sum(stats["attended"] for stats in subject_stats)
+    total_absent_units = sum(stats["absent"] for stats in subject_stats)
+    total_conducted_units = sum(stats["conducted"] for stats in subject_stats)
 
     # A semester is considered initialized if at least one subject has recorded attendance.
     # Using "any" rather than "all" avoids blocking metrics when some subjects (e.g. labs
     # that start later in the semester) haven't had any classes yet.
     is_initialized = len(subjects) > 0 and any(stats["is_initialized"] for stats in subject_stats)
 
-
-
-    if conducted_units == 0:
+    if total_conducted_units == 0:
         overall_percent = 100.0
     else:
-        overall_percent = round((attended_units / conducted_units) * 100.0, 2)
+        overall_percent = round((total_attended_units / total_conducted_units) * 100.0, 2)
 
     overall_safe_bunks = sum(stats["safe_bunks"] for stats in subject_stats) if is_initialized else 0
 
     return {
         "overall": {
             "total_lectures": total_lectures,
-            "attended": attended,
-            "absent": absent,
+            "attended": total_attended_units,
+            "absent": total_absent_units,
             "cancelled": cancelled,
             "unmarked": unmarked,
-            "conducted": conducted,
+            "conducted": total_conducted_units,
             "attendance_percent": overall_percent if is_initialized else 0.0,
             "safe_bunks_budget": overall_safe_bunks,
             "is_initialized": is_initialized

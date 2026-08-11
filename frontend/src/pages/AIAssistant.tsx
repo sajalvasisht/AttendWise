@@ -137,7 +137,7 @@ const AIAssistant: React.FC = () => {
 
         {/* Messages List Area */}
         <div className="flex-grow overflow-y-auto space-y-6 pr-1 flex flex-col min-h-0">
-          {messages.length <= 1 ? (
+          {messages.length === 0 ? (
             <div className="flex-grow flex flex-col justify-center items-center py-12 text-center max-w-sm mx-auto space-y-6 animate-scale-in">
               <div className="h-12 w-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shadow-sm">
                 <Sparkles className="h-5.5 w-5.5 animate-pulse" />

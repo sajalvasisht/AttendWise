@@ -192,3 +192,46 @@ def test_analytics_overview_admin_authorization(client, db_session):
         assert "registered_users" in data
         assert "daily_active_users" in data
 
+
+def test_google_oauth_account_linking_existing_user(client, db_session):
+    # a) A user registers manually with email "manual@attendwise.com" and password "pass123".
+    reg_data = {
+        "email": "manual@attendwise.com",
+        "password": "pass123",
+        "full_name": "Manual User"
+    }
+    reg_res = client.post("/api/v1/auth/register", json=reg_data)
+    assert reg_res.status_code == 201
+
+    # Check user created in db, initially is_verified is False
+    user = db_session.query(User).filter(User.email == "manual@attendwise.com").first()
+    assert user is not None
+    assert user.is_verified is False
+    assert user.google_id is None
+
+    # b) google_login is called with Google ID token containing email "manual@attendwise.com"
+    google_data = {
+        "credential": "mock-manual@attendwise.com"
+    }
+    google_res = client.post("/api/v1/auth/google", json=google_data)
+    assert google_res.status_code == 200
+    assert "access_token" in google_res.json()
+
+    # c) Verify the user record has google_id linked, is_verified set to True, and NO duplicate User record is created in the database
+    db_session.refresh(user)
+    assert user.google_id == "google-sub-manual@attendwise.com"
+    assert user.is_verified is True
+
+    user_count = db_session.query(User).filter(User.email == "manual@attendwise.com").count()
+    assert user_count == 1
+
+    # d) Verify manual password login (/auth/login) still succeeds for "manual@attendwise.com" with "pass123"
+    login_data = {
+        "username": "manual@attendwise.com",
+        "password": "pass123"
+    }
+    login_res = client.post("/api/v1/auth/login", data=login_data)
+    assert login_res.status_code == 200
+    assert "access_token" in login_res.json()
+
+
