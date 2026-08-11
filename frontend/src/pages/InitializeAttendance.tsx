@@ -58,17 +58,20 @@ const InitializeAttendance: React.FC = () => {
       const sem = res.find(s => s.is_active) || res[0];
       setSemesterId(sem.id);
       
-      const subList = await subjectService.list(sem.id);
-      setSubjects(subList);
+      const subList = await subjectService.list(sem.id, true);
+      // Ensure unique subjects by ID defensively
+      const uniqueSubList = Array.from(new Map(subList.map(s => [s.id, s])).values());
+      setSubjects(uniqueSubList);
       
       const conducted: Record<number, number | ""> = {};
       const attended: Record<number, number | ""> = {};
-      subList.forEach((s: Subject) => {
+      uniqueSubList.forEach((s: Subject) => {
         conducted[s.id] = 0;
         attended[s.id] = 0;
       });
       setConductedValues(conducted);
       setAttendedValues(attended);
+
     } catch (err: any) {
       console.error(err);
       setError("Failed to load subjects. Please refresh the page.");

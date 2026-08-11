@@ -312,8 +312,19 @@ const SetupWizard: React.FC = () => {
       setSelectedDay(workingDays[0]);
 
       if (extractedSubjects.length > 0) {
-        const createdSubjects: Subject[] = [];
+        // Deduplicate extracted subjects by name and code
+        const uniqueExtracted: typeof extractedSubjects = [];
+        const seenExtracted = new Set<string>();
         for (const es of extractedSubjects) {
+          const key = `${es.name.trim().toLowerCase()}__${(es.code || "").trim().toLowerCase()}`;
+          if (!seenExtracted.has(key)) {
+            seenExtracted.add(key);
+            uniqueExtracted.push(es);
+          }
+        }
+
+        const createdSubjects: Subject[] = [];
+        for (const es of uniqueExtracted) {
           try {
             // Find all slots matching this subject
             const matchingSlots = extractedSlots.filter(slot =>
@@ -348,12 +359,15 @@ const SetupWizard: React.FC = () => {
               min_attendance_percent: es.min_attendance_percent,
               units_per_class: calculatedUnits,
             });
-            createdSubjects.push(added);
+            if (!createdSubjects.some(cs => cs.id === added.id)) {
+              createdSubjects.push(added);
+            }
           } catch (subjErr) {
             console.error("Failed to auto-create subject", es.name, subjErr);
           }
         }
         setSubjects(createdSubjects);
+
         
         // Map extracted slots using subject name or code to subject ID!
         const mappedSlots = extractedSlots.map(slot => {

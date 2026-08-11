@@ -16,10 +16,13 @@ export interface Subject {
 }
 
 export const subjectService = {
-  async list(semesterId: number): Promise<Subject[]> {
-    const response = await api.get(`/semesters/${semesterId}/subjects`);
+  async list(semesterId: number, inTimetableOnly?: boolean): Promise<Subject[]> {
+    const response = await api.get(`/semesters/${semesterId}/subjects`, {
+      params: inTimetableOnly ? { in_timetable_only: true } : undefined,
+    });
     return response.data;
   },
+
 
   async create(semesterId: number, data: { name: string; code?: string; faculty?: string; min_attendance_percent: number; units_per_class?: number; units_earned_per_class?: number; units_lost_per_class?: number; track_attendance?: boolean; active_from?: string; active_until?: string }): Promise<Subject> {
     const response = await api.post(`/semesters/${semesterId}/subjects`, data);

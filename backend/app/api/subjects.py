@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from typing import List, Any
 
+from sqlalchemy import func
 from app.database.session import get_db
-from app.models.models import Subject, Semester, User
+from app.models.models import Subject, Semester, User, TimetableSlot
 from app.schemas.subject import SubjectCreate, SubjectResponse, SubjectUpdate, SubjectAttendanceSyncRequest
 from app.api.deps import get_current_user
+
 from app.services.analytics_service import analytics
 
 router = APIRouter(prefix="/semesters/{semester_id}/subjects", tags=["subjects"])
@@ -56,10 +58,47 @@ def create_subject(
         if lost_units == 1:
             lost_units = subject_in.units_per_class
 
+    name_clean = subject_in.name.strip()
+    code_clean = subject_in.code.strip() if subject_in.code else None
+
+    # Check if a subject with the same name and code already exists in this semester
+    existing_query = db.query(Subject).filter(
+        Subject.semester_id == semester_id,
+        func.lower(Subject.name) == func.lower(name_clean)
+    )
+    if code_clean:
+        existing_query = existing_query.filter(
+            (Subject.code == None) | (func.lower(Subject.code) == func.lower(code_clean))
+        )
+    existing_subject = existing_query.first()
+
+    if existing_subject:
+        # Update existing subject attributes if provided, avoiding duplicate database rows
+        if subject_in.faculty:
+            existing_subject.faculty = subject_in.faculty
+        if subject_in.min_attendance_percent is not None:
+            existing_subject.min_attendance_percent = subject_in.min_attendance_percent
+        if subject_in.units_per_class is not None:
+            existing_subject.units_per_class = subject_in.units_per_class
+            existing_subject.units_earned_per_class = earned_units
+            existing_subject.units_lost_per_class = lost_units
+        if track_attr is not None:
+            existing_subject.track_attendance = track_attr
+        if subject_in.active_from is not None:
+            existing_subject.active_from = subject_in.active_from
+        if subject_in.active_until is not None:
+            existing_subject.active_until = subject_in.active_until
+        if code_clean and not existing_subject.code:
+            existing_subject.code = code_clean
+
+        db.commit()
+        db.refresh(existing_subject)
+        return existing_subject
+
     db_subject = Subject(
         semester_id=semester_id,
-        name=subject_in.name,
-        code=subject_in.code,
+        name=name_clean,
+        code=code_clean,
         faculty=subject_in.faculty,
         min_attendance_percent=subject_in.min_attendance_percent,
         units_per_class=subject_in.units_per_class,
@@ -83,11 +122,33 @@ def create_subject(
 @router.get("", response_model=List[SubjectResponse])
 def read_subjects(
     semester_id: int,
+    in_timetable_only: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     verify_semester_owner(semester_id, current_user.id, db)
-    return db.query(Subject).filter(Subject.semester_id == semester_id).all()
+    query = db.query(Subject).filter(Subject.semester_id == semester_id)
+
+    if in_timetable_only:
+        query = query.join(
+            TimetableSlot, TimetableSlot.subject_id == Subject.id
+        ).filter(
+            TimetableSlot.semester_id == semester_id
+        ).distinct()
+
+    raw_subjects = query.all()
+
+    # Deduplicate subjects in case legacy duplicate rows exist for this semester
+    seen_keys = set()
+    unique_subjects = []
+    for s in raw_subjects:
+        key = (s.name.strip().lower(), (s.code or "").strip().lower())
+        if key not in seen_keys:
+            seen_keys.add(key)
+            unique_subjects.append(s)
+
+    return unique_subjects
+
 
 @router.put("/{subject_id}", response_model=SubjectResponse)
 def update_subject(

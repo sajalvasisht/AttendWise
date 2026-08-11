@@ -13,14 +13,23 @@ def map_raw_timetable(raw_data: Dict[str, Any]) -> ExtractedTimetableReview:
     Map raw JSON timetable extraction from the provider into the validated Review model.
     """
     raw_subjects = raw_data.get("subjects", [])
-    subjects = [
-        ExtractedSubjectReview(
-            name=s.get("name", ""),
-            code=s.get("code"),
-            min_attendance_percent=float(s.get("min_attendance_percent", 75.0))
-        )
-        for s in raw_subjects
-    ]
+    seen_subjects = set()
+    subjects = []
+    for s in raw_subjects:
+        name = (s.get("name") or "").strip()
+        code = (s.get("code") or "").strip() if s.get("code") else None
+        if not name:
+            continue
+        key = (name.lower(), (code or "").lower())
+        if key not in seen_subjects:
+            seen_subjects.add(key)
+            subjects.append(
+                ExtractedSubjectReview(
+                    name=name,
+                    code=code,
+                    min_attendance_percent=float(s.get("min_attendance_percent", 75.0))
+                )
+            )
 
     raw_slots = raw_data.get("timetable_slots", [])
     slots = [
@@ -42,6 +51,7 @@ def map_raw_timetable(raw_data: Dict[str, Any]) -> ExtractedTimetableReview:
         subjects=subjects,
         timetable_slots=slots
     )
+
 
 def map_raw_calendar(raw_data: Dict[str, Any]) -> ExtractedCalendarReview:
     """

@@ -82,8 +82,16 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
     }
 
 def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
-    subjects = db.query(Subject).filter(Subject.semester_id == semester_id, Subject.track_attendance == True).all()
+    raw_subjects = db.query(Subject).filter(Subject.semester_id == semester_id, Subject.track_attendance == True).all()
     
+    seen_keys = set()
+    subjects = []
+    for s in raw_subjects:
+        key = (s.name.strip().lower(), (s.code or "").strip().lower())
+        if key not in seen_keys:
+            seen_keys.add(key)
+            subjects.append(s)
+
     subject_stats = []
     total_lectures = 0
     attended = 0
@@ -113,6 +121,7 @@ def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
     # Using "any" rather than "all" avoids blocking metrics when some subjects (e.g. labs
     # that start later in the semester) haven't had any classes yet.
     is_initialized = len(subjects) > 0 and any(stats["is_initialized"] for stats in subject_stats)
+
 
 
     if conducted_units == 0:
