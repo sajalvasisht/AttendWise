@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../hooks/useAuth";
-import { useTheme } from "../context/ThemeContext";
-import type { Theme } from "../context/ThemeContext";
 import { semesterService } from "../services/semester";
 import type { Semester } from "../services/semester";
 import api from "../services/api";
@@ -11,8 +9,6 @@ import {
   User,
   Settings as SettingsIcon,
   Sun,
-  Moon,
-  Laptop,
   AlertTriangle,
   Trash2,
   Calendar,
@@ -47,7 +43,6 @@ function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
 
 const Settings: React.FC = () => {
   const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
   const [semesters, setSemesters] = useState<Semester[]>([]);
@@ -245,32 +240,12 @@ const Settings: React.FC = () => {
 
         {/* APPEARANCE SECTION */}
         <section className="premium-card p-6 space-y-4">
-          <h2 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Appearance & Theme</h2>
-          <p className="text-xs text-zinc-500 font-semibold">Select how AttendWise appears on your device. Your settings persist automatically.</p>
+          <h2 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Appearance</h2>
+          <p className="text-xs text-zinc-500 font-semibold">AttendWise uses a clean light theme optimized for readability.</p>
           
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { id: "light", label: "Light", icon: Sun },
-              { id: "dark", label: "Dark", icon: Moon },
-              { id: "system", label: "System", icon: Laptop },
-            ].map((themeOpt) => {
-              const Icon = themeOpt.icon;
-              const isActive = theme === themeOpt.id;
-              return (
-                <button
-                  key={themeOpt.id}
-                  onClick={() => setTheme(themeOpt.id as Theme)}
-                  className={`flex flex-col items-center justify-center py-3.5 rounded-xl border text-xs font-bold space-y-1.5 transition-all cursor-pointer shadow-sm ${
-                    isActive
-                      ? "bg-zinc-900 text-white border-zinc-900 shadow-[0_2px_8px_rgba(15,23,42,0.1)]"
-                      : "bg-white text-zinc-500 border-zinc-200 hover:text-zinc-800 hover:bg-zinc-50"
-                  }`}
-                >
-                  <Icon className="h-4.5 w-4.5" />
-                  <span>{themeOpt.label}</span>
-                </button>
-              );
-            })}
+          <div className="flex items-center space-x-3 bg-zinc-50 border border-zinc-200/60 rounded-xl p-3.5">
+            <Sun className="h-4.5 w-4.5 text-amber-500" />
+            <span className="text-xs font-bold text-zinc-700">Light Theme Active</span>
           </div>
         </section>
 

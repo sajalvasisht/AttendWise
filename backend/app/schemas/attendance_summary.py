@@ -18,7 +18,9 @@ class SubjectAttendanceStats(BaseModel):
     attendance_percent: float
     min_attendance_percent: float
     safe_bunks: int
+    safe_bunks_sessions: int = 0
     required_to_attend: int
+    required_sessions: int = 0
     is_initialized: bool = True
     units_per_class: int = 1
     units_earned_per_class: int = 1

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Any, Optional
 from datetime import date, timedelta
 
@@ -26,7 +26,7 @@ def read_lecture_occurrences(
     verify_semester_owner(semester_id, current_user.id, db)
 
     if start_date and end_date:
-        return db.query(LectureOccurrence).join(Subject).filter(
+        return db.query(LectureOccurrence).options(joinedload(LectureOccurrence.subject)).join(Subject).filter(
             LectureOccurrence.semester_id == semester_id,
             LectureOccurrence.date >= start_date,
             LectureOccurrence.date <= end_date,
@@ -35,7 +35,7 @@ def read_lecture_occurrences(
     
     target_date = date_query if date_query else date.today()
     
-    return db.query(LectureOccurrence).join(Subject).filter(
+    return db.query(LectureOccurrence).options(joinedload(LectureOccurrence.subject)).join(Subject).filter(
         LectureOccurrence.semester_id == semester_id,
         LectureOccurrence.date == target_date,
         Subject.track_attendance == True
@@ -50,7 +50,7 @@ def read_today_occurrences(
     verify_semester_owner(semester_id, current_user.id, db)
     
     today_date = date.today()
-    return db.query(LectureOccurrence).join(Subject).filter(
+    return db.query(LectureOccurrence).options(joinedload(LectureOccurrence.subject)).join(Subject).filter(
         LectureOccurrence.semester_id == semester_id,
         LectureOccurrence.date == today_date,
         Subject.track_attendance == True
@@ -66,7 +66,7 @@ def update_occurrence_status(
 ) -> Any:
     verify_active_semester(semester_id, current_user.id, db)
     
-    occurrence = db.query(LectureOccurrence).filter(
+    occurrence = db.query(LectureOccurrence).options(joinedload(LectureOccurrence.subject)).filter(
         LectureOccurrence.id == occurrence_id,
         LectureOccurrence.semester_id == semester_id
     ).first()
@@ -168,7 +168,7 @@ def read_upcoming_schedule(
                 event_type = "weekend"
                 description = "Weekend"
                 
-        occurrences = db.query(LectureOccurrence).filter(
+        occurrences = db.query(LectureOccurrence).options(joinedload(LectureOccurrence.subject)).filter(
             LectureOccurrence.semester_id == semester_id,
             LectureOccurrence.date == target_date
         ).order_by(LectureOccurrence.start_time).all()

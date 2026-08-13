@@ -39,7 +39,9 @@ export interface SubjectAttendanceStats {
   attendance_percent: number;
   min_attendance_percent: number;
   safe_bunks: number;
+  safe_bunks_sessions: number;
   required_to_attend: number;
+  required_sessions: number;
   is_initialized: boolean;
   units_per_class: number;
   units_earned_per_class: number;

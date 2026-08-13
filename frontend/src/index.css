@@ -64,36 +64,6 @@
     --radius: 20px;
 }
 
-.dark {
-    --background: #090d16;
-    --foreground: #f8fafc;
-    
-    --card: #121826;
-    --card-foreground: #f8fafc;
-    
-    --popover: #121826;
-    --popover-foreground: #f8fafc;
-    
-    --primary: #f8fafc;
-    --primary-foreground: #090d16;
-    
-    --secondary: #1e293b;
-    --secondary-foreground: #f8fafc;
-    
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    
-    --accent: #1e293b;
-    --accent-foreground: #f8fafc;
-    
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    
-    --border: #1e293b;
-    --input: #1e293b;
-    --ring: #38bdf8;
-}
-
 /* Base resets & typography */
 body {
   background-color: var(--background);
@@ -136,16 +106,6 @@ body {
   transform: translateY(-3px);
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.01);
   border-color: rgba(15, 23, 42, 0.1);
-}
-
-.dark .premium-card {
-  background-color: var(--card);
-  border-color: var(--border);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.dark .premium-card:hover {
-  border-color: #334155;
 }
 
 /* Page Transition Animations */

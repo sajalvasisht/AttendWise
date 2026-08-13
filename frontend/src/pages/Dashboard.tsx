@@ -33,7 +33,6 @@ const Dashboard: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   // Subject Attendance Edit states
   const [editingSubj, setEditingSubj] = useState<SubjectAttendanceStats | null>(null);
@@ -175,41 +174,47 @@ const Dashboard: React.FC = () => {
 
   const handleStatusChange = async (occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked" | "holiday" | "medical_leave" | "other") => {
     if (!semester) return;
-    setUpdatingId(occurrenceId);
     setError(null);
+
+    // Optimistic update: immediately reflect the new status in the UI
+    const previousLectures = todayLectures;
+    setTodayLectures(prev =>
+      prev.map(occ => occ.id === occurrenceId ? { ...occ, attendance_status: status } : occ)
+    );
 
     try {
       const updated = await attendanceService.updateStatus(semester.id, occurrenceId, status);
-      setTodayLectures(prev => 
+      // Confirm with server response
+      setTodayLectures(prev =>
         prev.map(occ => occ.id === occurrenceId ? { ...occ, attendance_status: updated.attendance_status } : occ)
       );
 
-      const [subjsRes, summaryRes] = await Promise.allSettled([
+      // Refresh stats in the background (non-blocking)
+      Promise.allSettled([
         attendanceService.getSubjectsAttendance(semester.id),
         attendanceService.getSummary(semester.id)
-      ]);
-
-      if (subjsRes.status === "fulfilled") {
-        const sortedSubjects = [...subjsRes.value].sort((a, b) => {
-          const getPriority = (s: SubjectAttendanceStats) => {
-            if (s.attendance_percent < s.min_attendance_percent) return 1;
-            if (s.safe_bunks === 0) return 2;
-            return 3;
-          };
-          return getPriority(a) - getPriority(b);
-        });
-        setSubjects(sortedSubjects);
-      }
-
-      if (summaryRes.status === "fulfilled") {
-        setOverallStats(summaryRes.value);
-      }
+      ]).then(([subjsRes, summaryRes]) => {
+        if (subjsRes.status === "fulfilled") {
+          const sortedSubjects = [...subjsRes.value].sort((a, b) => {
+            const getPriority = (s: SubjectAttendanceStats) => {
+              if (s.attendance_percent < s.min_attendance_percent) return 1;
+              if (s.safe_bunks === 0) return 2;
+              return 3;
+            };
+            return getPriority(a) - getPriority(b);
+          });
+          setSubjects(sortedSubjects);
+        }
+        if (summaryRes.status === "fulfilled") {
+          setOverallStats(summaryRes.value);
+        }
+      });
 
     } catch (err) {
       console.error("Failed to update status", err);
       setError("Failed to record attendance. Please try again.");
-    } finally {
-      setUpdatingId(null);
+      // Revert optimistic update
+      setTodayLectures(previousLectures);
     }
   };
 
@@ -558,7 +563,6 @@ const Dashboard: React.FC = () => {
                       <div className="absolute left-[9px] top-2.5 bottom-2.5 w-px bg-zinc-200/80" />
 
                       {todayLectures.map((occ) => {
-                        const isUpdating = updatingId === occ.id;
                         const status = occ.attendance_status;
 
                         let nodeColor = "bg-white border-zinc-200";
@@ -572,9 +576,7 @@ const Dashboard: React.FC = () => {
                             <div className={`absolute -left-[21px] top-1.5 h-4 w-4 rounded-full border-2 ${nodeColor} transition-all duration-200 z-10`} />
 
                             <div 
-                              className={`flex-1 premium-card p-5 flex items-center justify-between gap-6 ${
-                                isUpdating ? "opacity-60 pointer-events-none" : ""
-                              }`}
+                              className="flex-1 premium-card p-5 flex items-center justify-between gap-6"
                             >
                               <div className="min-w-0">
                                 <div className="flex items-center space-x-2">
@@ -711,11 +713,11 @@ const Dashboard: React.FC = () => {
                                 <span className="text-[9px] text-zinc-400 font-extrabold uppercase tracking-wider block">Safe Leave Allowance</span>
                                 {isBelow ? (
                                   <p className="text-[10.5px] font-bold text-red-650 leading-relaxed">
-                                    Below target! Attend <span className="font-extrabold underline">{Math.ceil(subj.required_to_attend / (subj.units_per_class || 1))} classes</span> to recover.
+                                    Below target! Attend <span className="font-extrabold underline">{subj.required_sessions} classes</span> to recover.
                                   </p>
                                 ) : (
                                   <div className="text-[10.5px] font-bold text-zinc-800 leading-normal">
-                                    You can safely miss <span className="font-extrabold text-zinc-950 underline">{Math.max(0, Math.floor(subj.safe_bunks / (subj.units_per_class || 1)))} classes</span>
+                                    You can safely miss <span className="font-extrabold text-zinc-950 underline">{subj.safe_bunks_sessions} classes</span>
                                     <span className="text-zinc-400 font-medium block mt-0.5">({Math.max(0, subj.safe_bunks)} attendance entries)</span>
                                   </div>
                                 )}

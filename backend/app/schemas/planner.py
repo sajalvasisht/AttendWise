@@ -13,10 +13,13 @@ class SubjectProjection(BaseModel):
     current_percent: float
     projected_percent: float
     current_safe_bunks: int
+    current_safe_sessions: int = 0
     projected_safe_bunks: int
+    projected_safe_sessions: int = 0
     is_safe: bool
     recovery_required: bool
     required_to_attend: int
+    required_sessions: int = 0
     units_per_class: int = 1
     units_earned_per_class: int = 1
     units_lost_per_class: int = 1

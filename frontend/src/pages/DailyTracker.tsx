@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { semesterService } from "../services/semester";
 import type { Semester } from "../services/semester";
@@ -28,7 +28,6 @@ const DailyTracker: React.FC = () => {
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [subjectStats, setSubjectStats] = useState<SubjectAttendanceStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [hasTimetable, setHasTimetable] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,10 +75,10 @@ const DailyTracker: React.FC = () => {
     fetchEvents();
   }, [semester]);
 
-  // Load month occurrences and day occurrences in parallel using Promise.allSettled
+  // Load month occurrences (single request per month change)
   useEffect(() => {
     if (!semester) return;
-    const fetchAttendanceData = async () => {
+    const fetchMonthData = async () => {
       setLoading(true);
       setError(null);
 
@@ -90,32 +89,22 @@ const DailyTracker: React.FC = () => {
       const endStr = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
       try {
-        const [monthRes, dayRes] = await Promise.allSettled([
-          attendanceService.getByRange(semester.id, startStr, endStr),
-          attendanceService.getByDate(semester.id, selectedDate)
-        ]);
-
-        if (monthRes.status === "fulfilled") {
-          setMonthOccurrences(monthRes.value);
-        } else {
-          console.error("Failed to load month range data:", monthRes.reason);
-        }
-
-        if (dayRes.status === "fulfilled") {
-          setOccurrences(dayRes.value);
-        } else {
-          console.error("Failed to load lectures:", dayRes.reason);
-          setError("Error fetching class list for the selected date.");
-        }
+        const monthData = await attendanceService.getByRange(semester.id, startStr, endStr);
+        setMonthOccurrences(monthData);
       } catch (err) {
-        console.error("Failed to load attendance data", err);
+        console.error("Failed to load month range data", err);
         setError("Error fetching attendance data.");
       } finally {
         setLoading(false);
       }
     };
-    fetchAttendanceData();
-  }, [semester, currentMonth, selectedDate]);
+    fetchMonthData();
+  }, [semester, currentMonth]);
+
+  // Derive day occurrences from month data (no separate API call)
+  useEffect(() => {
+    setOccurrences(monthOccurrences.filter(o => o.date === selectedDate));
+  }, [monthOccurrences, selectedDate]);
 
   // Quick navigation for dates (Prev Day / Next Day)
   const adjustDate = (days: number) => {
@@ -127,37 +116,38 @@ const DailyTracker: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
-  // Update Status handler
+  // Update Status handler — optimistic UI: update immediately, API in background
   const handleStatusChange = async (occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked" | "holiday" | "medical_leave" | "other") => {
     if (!semester) return;
-    setUpdatingId(occurrenceId);
+    setError(null);
+
+    // Optimistic update: immediately reflect status in both state arrays
+    const prevMonth = monthOccurrences;
+    const updateOcc = (occ: LectureOccurrence) =>
+      occ.id === occurrenceId ? { ...occ, attendance_status: status, is_imported: false } : occ;
+    setMonthOccurrences(prev => prev.map(updateOcc));
+    setOccurrences(prev => prev.map(updateOcc));
+
     try {
       const updated = await attendanceService.updateStatus(semester.id, occurrenceId, status);
-      // Immediately reflect status update and imported flag in local state
-      // is_imported is cleared to false by the backend on every manual edit
-      setOccurrences(prev =>
-        prev.map(occ =>
-          occ.id === occurrenceId
-            ? { ...occ, attendance_status: updated.attendance_status, is_imported: updated.is_imported }
-            : occ
-        )
-      );
-      // Update month occurrences cache too
-      setMonthOccurrences(prev =>
-        prev.map(occ =>
-          occ.id === occurrenceId
-            ? { ...occ, attendance_status: updated.attendance_status, is_imported: updated.is_imported }
-            : occ
-        )
-      );
-      // Re-fetch subjects statistics to update percentage impact in real-time
-      const stats = await attendanceService.getSubjectsAttendance(semester.id);
-      setSubjectStats(stats);
+      // Confirm with server response
+      const confirmOcc = (occ: LectureOccurrence) =>
+        occ.id === occurrenceId
+          ? { ...occ, attendance_status: updated.attendance_status, is_imported: updated.is_imported }
+          : occ;
+      setMonthOccurrences(prev => prev.map(confirmOcc));
+      setOccurrences(prev => prev.map(confirmOcc));
+
+      // Refresh stats in the background (non-blocking)
+      attendanceService.getSubjectsAttendance(semester.id)
+        .then(stats => setSubjectStats(stats))
+        .catch(e => console.warn("Stats refresh failed", e));
     } catch (err) {
       console.error("Failed to update status", err);
       setError("Failed to update attendance status. Try again.");
-    } finally {
-      setUpdatingId(null);
+      // Revert optimistic update
+      setMonthOccurrences(prevMonth);
+      setOccurrences(prevMonth.filter(o => o.date === selectedDate));
     }
   };
 
@@ -166,8 +156,31 @@ const DailyTracker: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
+  // Pre-indexed Maps for O(1) lookups in calendar grid (Bug 4 perf fix)
+  const monthOccsByDate = useMemo(() => {
+    const map = new Map<string, LectureOccurrence[]>();
+    for (const occ of monthOccurrences) {
+      const arr = map.get(occ.date);
+      if (arr) arr.push(occ);
+      else map.set(occ.date, [occ]);
+    }
+    return map;
+  }, [monthOccurrences]);
+
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent>();
+    for (const ev of allEvents) map.set(ev.date, ev);
+    return map;
+  }, [allEvents]);
+
+  const statsById = useMemo(() => {
+    const map = new Map<number, SubjectAttendanceStats>();
+    for (const s of subjectStats) map.set(s.subject_id, s);
+    return map;
+  }, [subjectStats]);
+
   // Find if selected date matches any exam or holiday
-  const dayEvent = allEvents.find(e => e.date === selectedDate);
+  const dayEvent = eventsByDate.get(selectedDate) || null;
   const dayExam = dayEvent && (dayEvent.event_type === "exam_day" || dayEvent.event_type === "exam") ? dayEvent : null;
   const dayHoliday = dayEvent && ["holiday", "college_closure", "exam_break"].includes(dayEvent.event_type) ? dayEvent : null;
 
@@ -181,7 +194,7 @@ const DailyTracker: React.FC = () => {
   };
 
   const getImpactPercent = (occ: LectureOccurrence, targetStatus: string) => {
-    const stats = subjectStats.find(s => s.subject_id === occ.subject_id);
+    const stats = statsById.get(occ.subject_id);
     if (!stats) return null;
 
     const earned = stats.units_earned_per_class || 1;
@@ -341,10 +354,10 @@ const DailyTracker: React.FC = () => {
               const isToday = todayStr === formatted;
               
               // Filter occurrences for this day
-              const dayOccs = monthOccurrences.filter(o => o.date === formatted);
+              const dayOccs = monthOccsByDate.get(formatted) || [];
               
               // Find calendar exceptions
-              const dayEv = allEvents.find(e => e.date === formatted);
+              const dayEv = eventsByDate.get(formatted);
               const isHoliday = dayEv && ["holiday", "college_closure", "exam_break"].includes(dayEv.event_type);
               const isExam = dayEv && (dayEv.event_type === "exam_day" || dayEv.event_type === "exam");
               const isLeave = dayEv && dayEv.event_type === "leave";
@@ -548,14 +561,10 @@ const DailyTracker: React.FC = () => {
                   ) : (
                     <div className="space-y-4 animate-scale-in">
                       {occurrences.map((occ) => {
-                        const isUpdating = updatingId === occ.id;
-                        
                         return (
                           <div 
                             key={occ.id} 
-                            className={`premium-card p-5 flex flex-col justify-between gap-4 ${
-                              isUpdating ? "opacity-60 pointer-events-none" : ""
-                            }`}
+                            className="premium-card p-5 flex flex-col justify-between gap-4"
                           >
                             {/* Lecture metadata */}
                             <div className="space-y-1">

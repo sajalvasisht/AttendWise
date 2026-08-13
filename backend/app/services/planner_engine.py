@@ -81,10 +81,13 @@ def simulate_leaves(db: Session, semester_id: int, dates: List[date]) -> Dict[st
             "current_percent": curr_subj["attendance_percent"],
             "projected_percent": proj_subj["attendance_percent"],
             "current_safe_bunks": curr_subj["safe_bunks"],
+            "current_safe_sessions": curr_subj.get("safe_bunks_sessions", 0),
             "projected_safe_bunks": proj_subj["safe_bunks"],
+            "projected_safe_sessions": proj_subj.get("safe_bunks_sessions", 0),
             "is_safe": is_safe,
             "recovery_required": recovery_required,
             "required_to_attend": proj_subj["required_to_attend"],
+            "required_sessions": proj_subj.get("required_sessions", 0),
             "units_per_class": curr_subj["units_per_class"],
             "units_earned_per_class": curr_subj["units_earned_per_class"],
             "units_lost_per_class": curr_subj["units_lost_per_class"]

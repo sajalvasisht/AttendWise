@@ -7,10 +7,13 @@ export interface SubjectProjection {
   current_percent: number;
   projected_percent: number;
   current_safe_bunks: number;
+  current_safe_sessions: number;
   projected_safe_bunks: number;
+  projected_safe_sessions: number;
   is_safe: boolean;
   recovery_required: boolean;
   required_to_attend: number;
+  required_sessions: number;
   units_per_class: number;
 }
 

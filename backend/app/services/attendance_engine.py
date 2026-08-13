@@ -4,17 +4,23 @@ import math
 from typing import Dict, Any, List
 from app.models.models import Subject, LectureOccurrence, Semester
 
-def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject) -> Dict[str, Any]:
+def calculate_subject_statistics(
+    db: Session, 
+    semester_id: int, 
+    subject: Subject,
+    occurrences: Optional[List[LectureOccurrence]] = None
+) -> Dict[str, Any]:
     """Compute per-subject attendance statistics purely from LectureOccurrence records.
     
     The calendar is the single source of truth. No independent totals are read from
     the Subject model (initial_conducted / initial_attended are always 0 post-sync and
     are intentionally ignored here).
     """
-    occurrences = db.query(LectureOccurrence).filter(
-        LectureOccurrence.semester_id == semester_id,
-        LectureOccurrence.subject_id == subject.id
-    ).all()
+    if occurrences is None:
+        occurrences = db.query(LectureOccurrence).filter(
+            LectureOccurrence.semester_id == semester_id,
+            LectureOccurrence.subject_id == subject.id
+        ).all()
 
     total = len(occurrences)
     present = sum(1 for occ in occurrences if occ.attendance_status == "present")
@@ -42,7 +48,7 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
     min_percent = subject.min_attendance_percent
     M = min_percent / 100.0
 
-    # Calculate safe bunks (in attendance units)
+    # Calculate safe bunks (in attendance units) — legacy field
     if conducted_units == 0:
         safe_bunks = 0
     else:
@@ -51,14 +57,26 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
         if safe_bunks < 0:
             safe_bunks = 0
 
+    # Calculate safe_bunks_sessions: max whole classes that can be missed
+    # while staying >= M. When missing x classes, conducted grows by x*lost_weight,
+    # so: attended / (conducted + x*lost_weight) >= M
+    #  => x <= (attended - M*conducted) / (M * lost_weight)
+    safe_bunks_sessions = 0
+    if conducted_units > 0 and M > 0 and lost_weight > 0:
+        surplus = attended_units - M * conducted_units
+        if surplus > 0:
+            safe_bunks_sessions = math.floor(surplus / (M * lost_weight))
+
     # Calculate required consecutive classes to attend to reach threshold (expressed in units)
     required_to_attend = 0
+    required_sessions = 0
     if percent < min_percent and conducted_units > 0:
         denominator = earned_weight * (1.0 - M)
         if denominator > 0:
             numerator = M * conducted_units - attended_units
             required_classes = math.ceil(numerator / denominator)
             required_to_attend = max(0, required_classes * earned_weight)
+            required_sessions = max(0, required_classes)
 
     return {
         "subject_id": subject.id,
@@ -77,7 +95,9 @@ def calculate_subject_statistics(db: Session, semester_id: int, subject: Subject
         "attendance_percent": percent if is_initialized else 0.0,
         "min_attendance_percent": min_percent,
         "safe_bunks": safe_bunks if is_initialized else 0,
+        "safe_bunks_sessions": safe_bunks_sessions if is_initialized else 0,
         "required_to_attend": required_to_attend if is_initialized else 0,
+        "required_sessions": required_sessions if is_initialized else 0,
         "is_initialized": is_initialized,
         "units_per_class": subject.units_per_class,
         "units_earned_per_class": subject.units_earned_per_class,
@@ -96,13 +116,25 @@ def calculate_semester_summary(db: Session, semester_id: int) -> Dict[str, Any]:
             seen_keys.add(key)
             subjects.append(s)
 
+    # Batch query ALL occurrences for this semester in 1 single DB query (eliminating N+1)
+    all_occurrences = db.query(LectureOccurrence).filter(
+        LectureOccurrence.semester_id == semester_id
+    ).all()
+    
+    occs_by_subject: Dict[int, List[LectureOccurrence]] = {}
+    for occ in all_occurrences:
+        if occ.subject_id not in occs_by_subject:
+            occs_by_subject[occ.subject_id] = []
+        occs_by_subject[occ.subject_id].append(occ)
+
     subject_stats = []
     total_lectures = 0
     cancelled = 0
     unmarked = 0
     
     for subject in subjects:
-        stats = calculate_subject_statistics(db, semester_id, subject)
+        subj_occs = occs_by_subject.get(subject.id, [])
+        stats = calculate_subject_statistics(db, semester_id, subject, occurrences=subj_occs)
         subject_stats.append(stats)
         
         total_lectures += stats["total_lectures"]

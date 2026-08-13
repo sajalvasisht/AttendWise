@@ -47,7 +47,7 @@ export const OnboardingTour: React.FC = () => {
     {
       targetSelector: 'a[href="/settings"]',
       title: "Settings & Customization",
-      description: "Start new semesters, switch color themes (Light/Dark/System), replace timelines, or manage your account details.",
+      description: "Start new semesters, replace timelines, or manage your account details.",
       position: "bottom"
     }
   ];

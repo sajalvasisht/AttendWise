@@ -42,6 +42,10 @@ class Semester(Base):
     lecture_occurrences = relationship("LectureOccurrence", back_populates="semester", cascade="all, delete-orphan")
     planned_leaves = relationship("PlannedLeave", back_populates="semester", cascade="all, delete-orphan")
 
+    __table_args__ = (
+        Index("ix_semesters_user_id", "user_id"),
+    )
+
 
 class Subject(Base):
     __tablename__ = "subjects"
@@ -65,6 +69,10 @@ class Subject(Base):
     timetable_slots = relationship("TimetableSlot", back_populates="subject", cascade="all, delete-orphan")
     lecture_occurrences = relationship("LectureOccurrence", back_populates="subject", cascade="all, delete-orphan")
 
+    __table_args__ = (
+        Index("ix_subjects_sem_id", "semester_id"),
+    )
+
 
 class TimetableSlot(Base):
     __tablename__ = "timetable_slots"
@@ -79,6 +87,10 @@ class TimetableSlot(Base):
 
     semester = relationship("Semester", back_populates="timetable_slots")
     subject = relationship("Subject", back_populates="timetable_slots")
+
+    __table_args__ = (
+        Index("ix_timetable_slots_sem_id", "semester_id"),
+    )
 
 
 class CalendarEvent(Base):
@@ -101,6 +113,10 @@ class CalendarEvent(Base):
     semester = relationship("Semester", back_populates="calendar_events")
     subject = relationship("Subject")
 
+    __table_args__ = (
+        Index("ix_calendar_events_sem_date", "semester_id", "date"),
+    )
+
 
 class LectureOccurrence(Base):
     __tablename__ = "lecture_occurrences"
@@ -120,6 +136,11 @@ class LectureOccurrence(Base):
 
     semester = relationship("Semester", back_populates="lecture_occurrences")
     subject = relationship("Subject", back_populates="lecture_occurrences")
+
+    __table_args__ = (
+        Index("ix_lecture_occurrences_sem_date", "semester_id", "date"),
+        Index("ix_lecture_occurrences_sem_subject", "semester_id", "subject_id"),
+    )
 
 
 class PlannedLeave(Base):

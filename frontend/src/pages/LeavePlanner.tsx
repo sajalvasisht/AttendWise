@@ -158,7 +158,7 @@ const LeavePlanner: React.FC = () => {
       };
     }
 
-    const projSafeClasses = simulation.subjects.reduce((sum, s) => sum + Math.floor(s.projected_safe_bunks / (s.units_per_class || 1)), 0);
+    const projSafeClasses = simulation.subjects.reduce((sum, s) => sum + (s.projected_safe_sessions || 0), 0);
     if (simulation.warnings.length > 0 || projSafeClasses === 0) {
       return {
         label: "Warning",
@@ -366,7 +366,7 @@ const LeavePlanner: React.FC = () => {
                               .map((s) => (
                                 <p key={s.subject_id}>
                                   <strong>{s.name}</strong> will fall below required attendance. Attend the next{" "}
-                                  <strong className="underline">{Math.ceil(s.required_to_attend / (s.units_per_class || 1))}</strong> lectures before taking this leave.
+                                  <strong className="underline">{s.required_sessions}</strong> lectures before taking this leave.
                                 </p>
                               ))}
                           </div>
@@ -492,12 +492,12 @@ const LeavePlanner: React.FC = () => {
                         <span className="text-[10px] text-zinc-450 uppercase font-bold tracking-widest block">Safe Lectures Remaining</span>
                         <div className="flex items-center justify-center space-x-2 text-base font-black pt-1">
                           <div className="text-zinc-400 line-through font-normal">
-                            {simulation.subjects.reduce((sum, s) => sum + Math.max(0, Math.floor(s.current_safe_bunks / (s.units_per_class || 1))), 0)} sessions
+                            {simulation.subjects.reduce((sum, s) => sum + Math.max(0, s.current_safe_sessions || 0), 0)} sessions
                             <span className="text-[10px] block text-zinc-400 font-normal">({simulation.subjects.reduce((sum, s) => Math.max(0, sum + s.current_safe_bunks), 0)} entries)</span>
                           </div>
                           <ArrowRight className="h-4 w-4 text-zinc-450" />
                           <div className="text-zinc-800">
-                            {simulation.subjects.reduce((sum, s) => sum + Math.max(0, Math.floor(s.projected_safe_bunks / (s.units_per_class || 1))), 0)} sessions
+                            {simulation.subjects.reduce((sum, s) => sum + Math.max(0, s.projected_safe_sessions || 0), 0)} sessions
                             <span className="text-[10px] text-zinc-400 font-semibold block">({simulation.subjects.reduce((sum, s) => Math.max(0, sum + s.projected_safe_bunks), 0)} entries)</span>
                           </div>
                         </div>
@@ -548,12 +548,12 @@ const LeavePlanner: React.FC = () => {
                               <span className="text-zinc-450">Safe Absences</span>
                               <div className="flex items-center space-x-1.5 font-extrabold text-right">
                                 <div className="text-zinc-400 font-normal">
-                                  {Math.max(0, Math.floor(subj.current_safe_bunks / (subj.units_per_class || 1)))} sessions
+                                  {Math.max(0, subj.current_safe_sessions || 0)} sessions
                                   <span className="text-[9.5px] block text-zinc-450 font-normal">({Math.max(0, subj.current_safe_bunks)} entries)</span>
                                 </div>
                                 <ArrowRight className="h-3 w-3 text-zinc-400" />
                                 <div className={subj.projected_safe_bunks < subj.current_safe_bunks ? "text-red-650" : "text-zinc-800"}>
-                                  {Math.max(0, Math.floor(subj.projected_safe_bunks / (subj.units_per_class || 1)))} sessions
+                                  {Math.max(0, subj.projected_safe_sessions || 0)} sessions
                                   <span className="text-[9.5px] text-zinc-450 font-semibold block">({Math.max(0, subj.projected_safe_bunks)} entries)</span>
                                 </div>
                               </div>
