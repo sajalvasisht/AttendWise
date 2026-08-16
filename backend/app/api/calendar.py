@@ -118,3 +118,68 @@ def create_calendar_event(
     return event
 
 
+@router.put("/event/{event_id}", response_model=CalendarEventResponse)
+def update_calendar_event(
+    semester_id: int,
+    event_id: int,
+    event_in: CalendarEventCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    verify_active_semester(semester_id, current_user.id, db)
+    event = db.query(CalendarEvent).filter(
+        CalendarEvent.id == event_id,
+        CalendarEvent.semester_id == semester_id
+    ).first()
+
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar event not found"
+        )
+
+    for field, value in event_in.dict(exclude_unset=True).items():
+        setattr(event, field, value)
+
+    db.commit()
+    db.refresh(event)
+
+    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+    if semester:
+        generate_occurrences(db, semester_id, start_from_date=semester.start_date)
+
+    return event
+
+
+from fastapi import APIRouter, Depends, HTTPException, status, Response
+
+@router.delete("/event/{event_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+def delete_calendar_event(
+    semester_id: int,
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Response:
+    verify_active_semester(semester_id, current_user.id, db)
+    event = db.query(CalendarEvent).filter(
+        CalendarEvent.id == event_id,
+        CalendarEvent.semester_id == semester_id
+    ).first()
+
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar event not found"
+        )
+
+    db.delete(event)
+    db.commit()
+
+    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+    if semester:
+        generate_occurrences(db, semester_id, start_from_date=semester.start_date)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+

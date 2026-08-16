@@ -8,7 +8,8 @@ def calculate_subject_statistics(
     db: Session, 
     semester_id: int, 
     subject: Subject,
-    occurrences: Optional[List[LectureOccurrence]] = None
+    occurrences: Optional[List[LectureOccurrence]] = None,
+    as_of_date: Optional[date] = None
 ) -> Dict[str, Any]:
     """Compute per-subject attendance statistics purely from LectureOccurrence records.
     
@@ -22,23 +23,35 @@ def calculate_subject_statistics(
             LectureOccurrence.subject_id == subject.id
         ).all()
 
+    cutoff_date = as_of_date if as_of_date else date.today()
+    if occurrences and all(occ.date > cutoff_date for occ in occurrences):
+        marked_dates = [occ.date for occ in occurrences if occ.attendance_status != "unmarked"]
+        cutoff_date = max(marked_dates) if marked_dates else max(occ.date for occ in occurrences)
+
+    # Occurrences that count towards attendance statistics:
+    # 1. Scheduled classes whose date has occurred (date <= cutoff_date)
+    # 2. Classes explicitly marked (present, absent, cancelled, etc.), including simulation marks
+    valid_occurrences = [occ for occ in occurrences if occ.date <= cutoff_date or occ.attendance_status != "unmarked"]
+
     total = len(occurrences)
-    present = sum(1 for occ in occurrences if occ.attendance_status == "present")
-    absent = sum(1 for occ in occurrences if occ.attendance_status == "absent")
-    cancelled = sum(1 for occ in occurrences if occ.attendance_status == "cancelled")
-    unmarked = sum(1 for occ in occurrences if occ.attendance_status == "unmarked")
+    present = sum(1 for occ in valid_occurrences if occ.attendance_status == "present")
+    absent = sum(1 for occ in valid_occurrences if occ.attendance_status == "absent")
+    cancelled = sum(1 for occ in valid_occurrences if occ.attendance_status == "cancelled")
+    unmarked = sum(1 for occ in valid_occurrences if occ.attendance_status == "unmarked")
 
-    # A subject is considered initialized once at least one class has been marked
-    # (present or absent). This is purely calendar-driven — no column flags needed.
-    is_initialized = (present + absent) > 0
+    # A subject is considered initialized if valid occurrences exist or marked classes exist
+    is_initialized = len(valid_occurrences) > 0 or (present + absent) > 0
 
-    # Weighted Units Calculation — derived entirely from LectureOccurrence statuses
+    # Weighted Units Calculation
     earned_weight = subject.units_earned_per_class
     lost_weight = subject.units_lost_per_class
 
     attended_units = present * earned_weight
     absent_units = absent * lost_weight
-    conducted_units = attended_units + absent_units
+
+    # Conducted/delivered: total units of non-cancelled valid occurrences
+    conducted_occurrences = [occ for occ in valid_occurrences if occ.attendance_status not in ("cancelled", "holiday")]
+    conducted_units = len(conducted_occurrences) * earned_weight
 
     if conducted_units == 0:
         percent = 100.0

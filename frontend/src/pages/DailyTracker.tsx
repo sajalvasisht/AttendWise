@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { semesterService } from "../services/semester";
+import { semesterService, getStoredActiveSemester, setStoredActiveSemester } from "../services/semester";
 import type { Semester } from "../services/semester";
 import { attendanceService } from "../services/attendance";
 import type { LectureOccurrence, SubjectAttendanceStats } from "../services/attendance";
@@ -15,7 +15,7 @@ import Navbar from "../components/Navbar";
 const DailyTracker: React.FC = () => {
   const navigate = useNavigate();
 
-  const [semester, setSemester] = useState<Semester | null>(null);
+  const [semester, setSemester] = useState<Semester | null>(() => getStoredActiveSemester());
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toLocaleDateString("en-CA")
   );
@@ -38,23 +38,28 @@ const DailyTracker: React.FC = () => {
   // Load active semester on mount
   useEffect(() => {
     const fetchSemester = async () => {
-      try {
-        const sems = await semesterService.list();
-        if (sems.length === 0) {
-          navigate("/setup");
-        } else {
-          const activeSem = sems.find(s => s.is_active) || sems[0];
+    try {
+      const sems = await semesterService.list();
+      if (Array.isArray(sems) && sems.length === 0) {
+        setStoredActiveSemester(null);
+        setSemester(null);
+        navigate("/setup");
+      } else if (Array.isArray(sems) && sems.length > 0) {
+        const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1] || sems[0];
+        if (activeSem) {
+          setStoredActiveSemester(activeSem);
           setSemester(activeSem);
           const slots = await timetableService.list(activeSem.id);
           setHasTimetable(slots.length > 0);
         }
-      } catch (err) {
-        console.error("Failed to load semesters", err);
-        setError("Could not load your semester data.");
-      } finally {
-        setInitialLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Failed to load semesters", err);
+      setError("Could not load your workspace data. The server may be starting up.");
+    } finally {
+      setInitialLoading(false);
+    }
+  };
     fetchSemester();
   }, [navigate]);
 

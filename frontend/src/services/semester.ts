@@ -10,6 +10,25 @@ export interface Semester {
   is_active: boolean;
 }
 
+export const getStoredActiveSemester = (): Semester | null => {
+  try {
+    const raw = localStorage.getItem("active_semester");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredActiveSemester = (sem: Semester | null) => {
+  try {
+    if (sem) {
+      localStorage.setItem("active_semester", JSON.stringify(sem));
+    } else {
+      localStorage.removeItem("active_semester");
+    }
+  } catch {}
+};
+
 export const semesterService = {
   async list(): Promise<Semester[]> {
     const response = await api.get("/semesters");
@@ -33,5 +52,6 @@ export const semesterService = {
 
   async delete(id: number): Promise<void> {
     await api.delete(`/semesters/${id}`);
+    localStorage.removeItem("active_semester");
   },
 };

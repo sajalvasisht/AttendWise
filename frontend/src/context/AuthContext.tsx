@@ -29,14 +29,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: true,
         loading: false,
       });
-    } catch (error) {
-      localStorage.removeItem("token");
-      setState({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        loading: false,
-      });
+    } catch (error: any) {
+      // Only clear token and log out on explicit 401 Unauthorized
+      if (error?.response?.status === 401) {
+        localStorage.removeItem("token");
+        setState({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          loading: false,
+        });
+      } else {
+        // Transient network error, timeout, or server cold start:
+        // Keep stored JWT token intact so user remains authenticated.
+        console.warn("Transient /auth/me error (token preserved):", error);
+        setState((prev) => ({
+          ...prev,
+          token,
+          isAuthenticated: true,
+          loading: false,
+        }));
+      }
     }
   };
 

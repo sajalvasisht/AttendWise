@@ -114,11 +114,11 @@ const ManageSetup: React.FC = () => {
     setError(null);
     try {
       const sems = await semesterService.list();
-      const active = sems.find((s) => s.is_active);
-      if (!active) {
+      if (sems.length === 0) {
         navigate("/setup");
         return;
       }
+      const active = sems.find((s) => s.is_active) || sems[sems.length - 1];
       setActiveSem(active);
       setSemName(active.name);
       setSemStart(active.start_date);
@@ -138,7 +138,7 @@ const ManageSetup: React.FC = () => {
       setCalendarEvents(events);
     } catch (err: any) {
       console.error(err);
-      setError("Failed to load semester setup data.");
+      setError("Failed to load semester setup data. The server may be starting up.");
     } finally {
       setLoading(false);
     }

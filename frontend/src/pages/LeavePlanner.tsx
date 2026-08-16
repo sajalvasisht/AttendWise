@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { semesterService } from "../services/semester";
+import { semesterService, getStoredActiveSemester, setStoredActiveSemester } from "../services/semester";
 import type { Semester } from "../services/semester";
 import { plannerService } from "../services/planner";
 import type { SimulationResponse } from "../services/planner";
@@ -34,7 +34,7 @@ function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
 const LeavePlanner: React.FC = () => {
   const navigate = useNavigate();
 
-  const [semester, setSemester] = useState<Semester | null>(null);
+  const [semester, setSemester] = useState<Semester | null>(() => getStoredActiveSemester());
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [datesList, setDatesList] = useState<string[]>([]);
   const [simulation, setSimulation] = useState<SimulationResponse | null>(null);
@@ -47,25 +47,28 @@ const LeavePlanner: React.FC = () => {
   const [dateFocused, setDateFocused] = useState(false);
   const [dateHovered, setDateHovered] = useState(false);
 
-  // Load semester and data on mount
-  useEffect(() => {
-    const fetchSemester = async () => {
-      try {
-        const sems = await semesterService.list();
-        if (sems.length === 0) {
-          navigate("/setup");
-          return;
-        }
+  const fetchSemester = async () => {
+    try {
+      const sems = await semesterService.list();
+      if (Array.isArray(sems) && sems.length === 0) {
+        setStoredActiveSemester(null);
+        setSemester(null);
+        navigate("/setup");
+        return;
+      }
 
-        const activeSem = sems.find(s => s.is_active) || sems[0];
+      const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1] || sems[0];
+      if (activeSem) {
+        setStoredActiveSemester(activeSem);
         setSemester(activeSem);
+      }
 
+      if (activeSem) {
         // Fetch subjects and calendar exceptions in parallel
         const [subjsRes, eventsRes] = await Promise.allSettled([
           subjectService.list(activeSem.id),
           calendarService.list(activeSem.id),
         ]);
-
 
         if (subjsRes.status === "fulfilled") {
           setHasSubjects(subjsRes.value.length > 0);
@@ -74,13 +77,16 @@ const LeavePlanner: React.FC = () => {
         if (eventsRes.status === "fulfilled") {
           setAllEvents(eventsRes.value);
         }
-      } catch (err) {
-        console.error("Failed to load semester data", err);
-        setError("Could not load your semester data.");
-      } finally {
-        setInitialLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Failed to load semester data", err);
+      setError("Could not load your workspace data. The server may be starting up.");
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchSemester();
   }, [navigate]);
 

@@ -57,9 +57,16 @@ const Login: React.FC = () => {
   const redirectAfterLogin = async () => {
     try {
       const { data } = await api.get("/semesters");
-      navigate(data.find((s: any) => s.is_active) ? "/dashboard" : "/welcome");
-    } catch {
-      navigate("/welcome");
+      if (Array.isArray(data) && data.length > 0) {
+        navigate("/dashboard");
+      } else if (Array.isArray(data) && data.length === 0) {
+        navigate("/welcome");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.warn("[Login] Semester check API error (defaulting to /dashboard):", err);
+      navigate("/dashboard");
     }
   };
 

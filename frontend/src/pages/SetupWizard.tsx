@@ -9,7 +9,7 @@ import { timetableService } from "../services/timetable";
 import { calendarService } from "../services/calendar";
 import { aiService } from "../services/ai";
 import { 
-  Plus, Trash2, Clock, AlertCircle, ArrowRight, Check, Loader2, Edit3
+  Plus, Trash2, Clock, AlertCircle, ArrowRight, Check, Loader2, Edit3, RefreshCw
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { AttendWiseLogo } from "../components/AttendWiseLogo";
@@ -87,38 +87,43 @@ const SetupWizard: React.FC = () => {
   const [pendingEvents, setPendingEvents] = useState<any[]>([]);
   const [showCalendarMergeConfirm, setShowCalendarMergeConfirm] = useState(false);
 
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+
+  const checkExistingSemester = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get("mode");
+
+    if (mode === "new") {
+      setSemester(null);
+      setStep(1);
+      return;
+    }
+
+    setWorkspaceError(null);
+    try {
+      const sems = await semesterService.list();
+      // Look for the active semester
+      const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1];
+      if (activeSem && mode !== "restart") {
+        setSemester(activeSem);
+        setSemName(activeSem.name);
+        setSemStart(activeSem.start_date);
+        setSemEnd(activeSem.end_date);
+        if (activeSem.working_days) {
+          setWorkingDays(activeSem.working_days.split(",").map(Number));
+        }
+        loadSemesterData(activeSem.id);
+        setSetupMethod("manual");
+        setStep(3); // Start at step 3 (Subjects) if semester exists
+      }
+    } catch (err) {
+      console.error("Error loading semester details:", err);
+      setWorkspaceError("Couldn't load your existing setup data. The server may be starting up.");
+    }
+  };
+
   // Load active semester if one already exists
   useEffect(() => {
-    const checkExistingSemester = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const mode = params.get("mode");
-
-      if (mode === "new") {
-        setSemester(null);
-        setStep(1);
-        return;
-      }
-
-      try {
-        const sems = await semesterService.list();
-        // Look for the active semester
-        const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1];
-        if (activeSem && mode !== "restart") {
-          setSemester(activeSem);
-          setSemName(activeSem.name);
-          setSemStart(activeSem.start_date);
-          setSemEnd(activeSem.end_date);
-          if (activeSem.working_days) {
-            setWorkingDays(activeSem.working_days.split(",").map(Number));
-          }
-          loadSemesterData(activeSem.id);
-          setSetupMethod("manual");
-          setStep(3); // Start at step 3 (Subjects) if semester exists
-        }
-      } catch (err) {
-        console.error("Error loading semester details:", err);
-      }
-    };
     checkExistingSemester();
   }, []);
 
@@ -659,6 +664,26 @@ const SetupWizard: React.FC = () => {
       {/* Main Wizard Layout */}
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-12 space-y-10">
         
+        {workspaceError && !semester && (
+          <div className="premium-card p-10 max-w-md mx-auto text-center space-y-5 my-12 animate-scale-in">
+            <div className="h-12 w-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-500 mx-auto">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-bold text-zinc-900">Couldn't load your setup data</h3>
+              <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                We couldn't connect to AttendWise to check your active setup. Your data is safe. The server may be starting up.
+              </p>
+            </div>
+            <button
+              onClick={checkExistingSemester}
+              className="rounded-xl bg-zinc-900 px-5 py-2.5 text-xs font-bold text-white hover:bg-zinc-800 transition-all flex items-center justify-center space-x-2 mx-auto cursor-pointer shadow-sm"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Retry Loading Setup</span>
+            </button>
+          </div>
+        )}
         {/* Clickable Step Indicator with Navigation Improvements */}
         {setupMethod === "manual" && (
           <div className="flex items-center justify-between max-w-xl mx-auto border border-border bg-card rounded-xl p-3 shadow-[0_1px_2px_rgba(0,0,0,0.01)] text-xs text-muted-foreground font-medium">
@@ -1720,7 +1745,6 @@ const SetupWizard: React.FC = () => {
 
           </div>
         )}
-
       </main>
 
       {/* CONFIRM MERGE OR REPLACE CALENDAR EVENTS DIALOG */}

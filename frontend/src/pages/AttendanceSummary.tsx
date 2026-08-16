@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { semesterService } from "../services/semester";
+import { semesterService, setStoredActiveSemester } from "../services/semester";
 import { attendanceService } from "../services/attendance";
 import type { OverallAttendanceStats, SubjectAttendanceStats } from "../services/attendance";
 import { AlertCircle, BookOpen, Calculator } from "lucide-react";
@@ -18,24 +18,27 @@ const AttendanceSummary: React.FC = () => {
     const fetchSummaryData = async () => {
       try {
         const sems = await semesterService.list();
-        if (sems.length === 0) {
+        if (Array.isArray(sems) && sems.length === 0) {
+          setStoredActiveSemester(null);
           navigate("/setup");
           return;
         }
         
-        const activeSem = sems.find(s => s.is_active) || sems[0];
-        
-        // Fetch stats in parallel with Promise.allSettled for maximum resilience
-        const [overallRes, subjectsRes] = await Promise.allSettled([
-          attendanceService.getSummary(activeSem.id),
-          attendanceService.getSubjectsAttendance(activeSem.id)
-        ]);
-        
-        if (overallRes.status === "fulfilled") {
-          setOverall(overallRes.value);
-        }
-        if (subjectsRes.status === "fulfilled") {
-          setSubjects(subjectsRes.value);
+        const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1] || sems[0];
+        if (activeSem) {
+          setStoredActiveSemester(activeSem);
+          // Fetch stats in parallel with Promise.allSettled for maximum resilience
+          const [overallRes, subjectsRes] = await Promise.allSettled([
+            attendanceService.getSummary(activeSem.id),
+            attendanceService.getSubjectsAttendance(activeSem.id)
+          ]);
+          
+          if (overallRes.status === "fulfilled") {
+            setOverall(overallRes.value);
+          }
+          if (subjectsRes.status === "fulfilled") {
+            setSubjects(subjectsRes.value);
+          }
         }
       } catch (err) {
         console.error("Failed to load attendance summary details:", err);

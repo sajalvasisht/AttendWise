@@ -4,7 +4,7 @@ import {
   Loader2, AlertCircle, Clock, Brain, Trash2, 
   Upload, CalendarDays, RefreshCw, ChevronRight, Edit3
 } from "lucide-react";
-import { semesterService } from "../services/semester";
+import { semesterService, getStoredActiveSemester, setStoredActiveSemester } from "../services/semester";
 import type { Semester } from "../services/semester";
 import { attendanceService } from "../services/attendance";
 import type { OverallAttendanceStats, SubjectAttendanceStats, LectureOccurrence } from "../services/attendance";
@@ -21,7 +21,8 @@ import { useAuth } from "../hooks/useAuth";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [semester, setSemester] = useState<Semester | null>(null);
+  const [semester, setSemester] = useState<Semester | null>(() => getStoredActiveSemester());
+  const [isNoSemester, setIsNoSemester] = useState(false);
   const [subjects, setSubjects] = useState<SubjectAttendanceStats[]>([]);
   const [todayLectures, setTodayLectures] = useState<LectureOccurrence[]>([]);
   const [nextHoliday, setNextHoliday] = useState<CalendarEvent | null>(null);
@@ -31,7 +32,7 @@ const Dashboard: React.FC = () => {
   const [plannerSuggestions, setPlannerSuggestions] = useState<any[]>([]);
   const [overallStats, setOverallStats] = useState<OverallAttendanceStats | null>(null);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => !getStoredActiveSemester());
   const [error, setError] = useState<string | null>(null);
 
   // Subject Attendance Edit states
@@ -82,15 +83,34 @@ const Dashboard: React.FC = () => {
   };
 
   const fetchDashboardData = async () => {
+    if (!semester) {
+      setLoading(true);
+    }
+    setError(null);
+    setIsNoSemester(false);
     try {
       const sems = await semesterService.list();
-      if (sems.length === 0) {
+      // Contract Requirement: ONLY treat user as having no setup when HTTP 200 OK returns []
+      if (Array.isArray(sems) && sems.length === 0) {
+        setStoredActiveSemester(null);
+        setSemester(null);
+        setIsNoSemester(true);
         setLoading(false);
         navigate("/welcome");
         return;
       }
 
-      const activeSem = sems.find(s => s.is_active) || sems[0];
+      const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1] || sems[0];
+      if (!activeSem) {
+        setStoredActiveSemester(null);
+        setSemester(null);
+        setIsNoSemester(true);
+        setLoading(false);
+        navigate("/welcome");
+        return;
+      }
+
+      setStoredActiveSemester(activeSem);
       setSemester(activeSem);
 
       // Fetch primary dashboard stats and schedules in parallel using Promise.allSettled for maximum resilience
@@ -161,9 +181,11 @@ const Dashboard: React.FC = () => {
           console.warn("Non-blocking planner suggestions note:", e);
         });
 
-    } catch (err) {
-      console.error("Error fetching dashboard statistics:", err);
-      setError("Error loading workspace data.");
+    } catch (err: any) {
+      console.error("[Dashboard] Error fetching dashboard statistics:", err);
+      // Contract Requirement: An API failure MUST NEVER trigger onboarding redirect
+      setIsNoSemester(false);
+      setError("Couldn't load your workspace data. The server may be starting up.");
       setLoading(false);
     }
   };
@@ -346,15 +368,42 @@ const Dashboard: React.FC = () => {
 
       <main className="flex-grow max-w-6xl mx-auto w-full px-6 py-14 space-y-12">
         
-        {/* Global Error */}
-        {error && (
+        {/* Global Error Banner */}
+        {error && semester && (
           <div className="rounded-2xl border border-red-500/15 bg-red-50/50 p-4.5 text-xs text-red-600 flex items-start space-x-3 animate-fade-in shadow-[0_1px_3px_rgba(15,23,42,0.01)]">
             <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
             <span className="leading-relaxed font-semibold">{error}</span>
           </div>
         )}
 
-        {loading ? (
+        {/* State B: Explicit Empty Semester Result (200 OK with []) */}
+        {isNoSemester ? (
+          <div className="flex flex-col items-center justify-center py-32 space-y-4 animate-scale-in">
+            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+            <p className="text-xs text-zinc-400 font-semibold">Redirecting to onboarding guide...</p>
+          </div>
+        ) : !loading && !semester && error ? (
+          /* State C & E: Transient API / Server Failure (Recoverable Error + Retry State) */
+          <div className="premium-card p-10 max-w-md mx-auto text-center space-y-5 my-12 animate-scale-in">
+            <div className="h-12 w-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-500 mx-auto">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-bold text-zinc-900">Couldn't load your workspace data</h3>
+              <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                We couldn't connect to AttendWise to load your active semester. Your data is safe. The server may be starting up.
+              </p>
+            </div>
+            <button
+              onClick={fetchDashboardData}
+              className="rounded-xl bg-zinc-900 px-5 py-2.5 text-xs font-bold text-white hover:bg-zinc-800 transition-all flex items-center justify-center space-x-2 mx-auto cursor-pointer shadow-sm"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Retry Loading Workspace</span>
+            </button>
+          </div>
+        ) : loading && !semester ? (
+          /* Skeleton Loader */
           <div className="space-y-12 animate-pulse">
             {/* Header Skeleton */}
             <div className="pt-2 pb-2 space-y-3">
@@ -399,12 +448,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
-        ) : !semester ? (
-          <div className="flex flex-col items-center justify-center py-32 space-y-4 animate-scale-in">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-            <p className="text-xs text-zinc-400 font-semibold">Redirecting to onboarding guide...</p>
-          </div>
-        ) : (
+        ) : semester ? (
           /* Active State */
           <div className="space-y-12">
             
@@ -829,7 +873,7 @@ const Dashboard: React.FC = () => {
             </div>
 
           </div>
-        )}
+        ) : null}
 
       </main>
 

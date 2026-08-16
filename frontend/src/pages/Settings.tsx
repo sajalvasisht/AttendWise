@@ -81,13 +81,17 @@ const Settings: React.FC = () => {
   }, []);
 
   const loadSemesters = async () => {
+    setError(null);
     try {
       const list = await semesterService.list();
       setSemesters(list);
-      const active = list.find((s) => s.is_active);
-      setActiveSem(active || list[list.length - 1] || null);
-    } catch (err) {
-      console.error(err);
+      const active = list.find((s) => s.is_active) || list[list.length - 1];
+      if (active) {
+        setActiveSem(active);
+      }
+    } catch (err: any) {
+      console.error("Error loading semesters in Settings:", err);
+      setError("Couldn't load your semester settings. The server may be starting up.");
     }
   };
 

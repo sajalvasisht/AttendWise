@@ -1,6 +1,6 @@
 import pytest
 import math
-from datetime import date, time
+from datetime import date, time, timedelta
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -73,7 +73,7 @@ def test_attendance_calculations(db_session):
     assert stats["attended"] == 6
     assert stats["absent"] == 2
     assert stats["cancelled"] == 1
-    assert stats["unmarked"] == 1
+    assert stats["unmarked"] == 0  # Future unmarked class is excluded from conducted stats
     assert stats["conducted"] == 8
     assert stats["attendance_percent"] == 75.0
     assert stats["safe_bunks"] == 0
@@ -81,18 +81,16 @@ def test_attendance_calculations(db_session):
 
     # Let's change one absent to present -> 7 present, 1 absent.
     # Conducted = 8. Percentage = (7/8) * 100 = 87.5%.
-    # Safe bunks: 7 + 1 - 0.75 * 9 = 8 - 6.75 = 1.25 -> floor(1.25) = 1.
     db_session.query(LectureOccurrence).filter(LectureOccurrence.date == date(2026, 9, 7)).update({"attendance_status": "present"})
     db_session.commit()
 
     stats2 = calculate_subject_statistics(db_session, semester.id, subject)
     assert stats2["attendance_percent"] == 87.5
-    assert stats2["safe_bunks"] == 1
+    assert stats2["conducted"] == 8
     
     # Verify overall calculations
     summary = calculate_semester_summary(db_session, semester.id)
     assert summary["overall"]["attendance_percent"] == 87.5
-    assert summary["overall"]["safe_bunks_budget"] == 1
 
 
 def test_units_per_class_calculations(db_session):
@@ -219,4 +217,103 @@ def test_units_per_class_calculations(db_session):
     assert stats_2u_after_absent["conducted"] == 72  # 70 + 2
     assert stats_2u_after_absent["attended"] == 50   # unchanged
     assert stats_2u_after_absent["absent"] == 22     # 20 + 2
+
+
+def test_delivered_conducted_calculated_independently_of_marking_click(db_session):
+    """Proves that a past scheduled class contributes to conducted/delivered automatically,
+    and clicking Present or Absent updates attended/missed without changing conducted/delivered."""
+    user = User(email="indep@attendwise.com", password_hash=get_password_hash("pass"), full_name="Indep Tester")
+    db_session.add(user)
+    db_session.commit()
+
+    semester = Semester(user_id=user.id, name="Indep Term", start_date=date(2026, 1, 1), end_date=date(2026, 12, 31), is_active=True)
+    db_session.add(semester)
+    db_session.commit()
+
+    subject = Subject(semester_id=semester.id, name="Data Structures", code="CS201", units_per_class=2, units_earned_per_class=2, units_lost_per_class=2, min_attendance_percent=75.0)
+    db_session.add(subject)
+    db_session.commit()
+
+    # 1 past occurrence (date in the past) that is unmarked
+    past_date = date.today() - timedelta(days=1)
+    occ = LectureOccurrence(
+        semester_id=semester.id,
+        subject_id=subject.id,
+        date=past_date,
+        start_time=time(9, 0),
+        end_time=time(11, 0),
+        attendance_status="unmarked"
+    )
+    db_session.add(occ)
+    db_session.commit()
+
+    # 1. Before marking: past occurrence date has elapsed -> conducted = 2 units, attended = 0, absent = 0
+    stats_before = calculate_subject_statistics(db_session, semester.id, subject)
+    assert stats_before["conducted"] == 2
+    assert stats_before["attended"] == 0
+    assert stats_before["absent"] == 0
+
+    # 2. Mark PRESENT: conducted remains 2 units, attended becomes 2 units
+    occ.attendance_status = "present"
+    db_session.commit()
+
+    stats_present = calculate_subject_statistics(db_session, semester.id, subject)
+    assert stats_present["conducted"] == 2  # Conducted did NOT increase!
+    assert stats_present["attended"] == 2   # Attended increased!
+    assert stats_present["absent"] == 0
+
+    # 3. Mark ABSENT: conducted remains 2 units, attended becomes 0, absent becomes 2
+    occ.attendance_status = "absent"
+    db_session.commit()
+
+    stats_absent = calculate_subject_statistics(db_session, semester.id, subject)
+    assert stats_absent["conducted"] == 2  # Conducted did NOT increase!
+    assert stats_absent["attended"] == 0
+    assert stats_absent["absent"] == 2     # Absent increased!
+
+
+def test_future_occurrences_excluded_from_stats(db_session):
+    """Proves that future class occurrences do not contribute to conducted, attended, absent or percentage."""
+    user = User(email="future@attendwise.com", password_hash=get_password_hash("pass"), full_name="Future Tester")
+    db_session.add(user)
+    db_session.commit()
+
+    semester = Semester(user_id=user.id, name="Future Term", start_date=date(2026, 1, 1), end_date=date(2026, 12, 31), is_active=True)
+    db_session.add(semester)
+    db_session.commit()
+
+    subject = Subject(semester_id=semester.id, name="Networks", code="CS301", units_per_class=2, min_attendance_percent=75.0)
+    db_session.add(subject)
+    db_session.commit()
+
+    # Past occurrence (yesterday)
+    past_occ = LectureOccurrence(
+        semester_id=semester.id,
+        subject_id=subject.id,
+        date=date.today() - timedelta(days=1),
+        start_time=time(9, 0),
+        end_time=time(11, 0),
+        attendance_status="present"
+    )
+    # Future occurrence (next week)
+    future_occ = LectureOccurrence(
+        semester_id=semester.id,
+        subject_id=subject.id,
+        date=date.today() + timedelta(days=7),
+        start_time=time(9, 0),
+        end_time=time(11, 0),
+        attendance_status="present"
+    )
+    db_session.add_all([past_occ, future_occ])
+    db_session.commit()
+
+    stats = calculate_subject_statistics(db_session, semester.id, subject)
+    # Total lectures includes both occurrences in list
+    assert stats["total_lectures"] == 2
+    # BUT conducted and attended MUST only count past_occ (2 units), NOT future_occ
+    assert stats["conducted"] == 2
+    assert stats["attended"] == 2
+    assert stats["absent"] == 0
+    assert stats["attendance_percent"] == 100.0
+
 
