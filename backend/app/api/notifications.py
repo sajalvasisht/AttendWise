@@ -57,10 +57,11 @@ def get_notifications(
         min_pct = sub_stat["min_attendance_percent"]
         # Only alert if classes have actually been conducted/initialized
         if sub_stat["is_initialized"] and pct < min_pct:
+            subj_name = sub_stat.get("name") or sub_stat.get("subject_name", "Subject")
             notifications.append({
                 "id": f"low-attendance-{sub_stat['subject_id']}",
                 "type": "warning",
-                "title": f"Low Attendance: {sub_stat['subject_name']}",
+                "title": f"Low Attendance: {subj_name}",
                 "description": f"Current attendance is {pct:.1f}%, which is below your target of {min_pct}%."
             })
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import Any
@@ -20,7 +20,7 @@ from app.services.analytics_service import analytics
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
+def register(user_in: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> Any:
     normalized_email = user_in.email.strip().lower()
     
     # Check if user already exists
@@ -45,8 +45,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     db.commit()
     db.refresh(db_user)
     
-    # Send verification link
-    send_verification_email(normalized_email, v_token)
+    # Dispatch email sending asynchronously via BackgroundTasks (non-blocking)
+    background_tasks.add_task(send_verification_email, normalized_email, v_token)
     
     return db_user
 
@@ -154,7 +154,7 @@ def verify_email(request: VerifyEmailRequest, db: Session = Depends(get_db)) -> 
     return {"message": "Email successfully verified. You can now log in."}
 
 @router.post("/forgot-password")
-def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)) -> Any:
+def forgot_password(request: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> Any:
     normalized_email = request.email.strip().lower()
     user = db.query(User).filter(User.email == normalized_email).first()
     
@@ -164,7 +164,8 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
         user.reset_token_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
         db.commit()
         
-        send_reset_password_email(user.email, reset_token)
+        # Dispatch reset email asynchronously via BackgroundTasks (non-blocking)
+        background_tasks.add_task(send_reset_password_email, user.email, reset_token)
         
     return {"message": "If this email is registered, a password reset link has been sent."}
 

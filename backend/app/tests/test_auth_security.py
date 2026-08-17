@@ -235,3 +235,51 @@ def test_google_oauth_account_linking_existing_user(client, db_session):
     assert "access_token" in login_res.json()
 
 
+def test_registration_smtp_failure_non_blocking_and_persists_user(client, db_session, monkeypatch):
+    """Proves that even if SMTP fails or throws a network exception, registration returns HTTP 201 immediately and persists the user."""
+    def mock_smtp_failure(*args, **kwargs):
+        raise OSError("[Errno 101] Network is unreachable")
+
+    import smtplib
+    monkeypatch.setattr(smtplib, "SMTP", mock_smtp_failure)
+
+    reg_data = {
+        "email": "smtp_fail@attendwise.com",
+        "password": "pass123password",
+        "full_name": "SMTP Fail User"
+    }
+
+    res = client.post("/api/v1/auth/register", json=reg_data)
+    assert res.status_code == 201
+    data = res.json()
+    assert data["email"] == "smtp_fail@attendwise.com"
+
+    # User MUST be committed to database, but remain is_verified = False (security model preserved)
+    user = db_session.query(User).filter(User.email == "smtp_fail@attendwise.com").first()
+    assert user is not None
+    assert user.is_verified is False
+
+
+def test_notifications_keyerror_fix(client, db_session):
+    """Verifies that /notifications endpoint does not crash with KeyError: 'subject_name'."""
+    # Register & verify user
+    reg_data = {
+        "email": "notif@attendwise.com",
+        "password": "pass123password",
+        "full_name": "Notif User"
+    }
+    client.post("/api/v1/auth/register", json=reg_data)
+    user = db_session.query(User).filter(User.email == "notif@attendwise.com").first()
+    user.is_verified = True
+    db_session.commit()
+
+    # Login
+    login_res = client.post("/api/v1/auth/login", data={"username": "notif@attendwise.com", "password": "pass123password"})
+    token = login_res.json()["access_token"]
+
+    # Call notifications endpoint
+    res = client.get("/api/v1/notifications", headers={"Authorization": f"Bearer {token}"})
+    assert res.status_code == 200
+    assert isinstance(res.json(), list)
+
+
