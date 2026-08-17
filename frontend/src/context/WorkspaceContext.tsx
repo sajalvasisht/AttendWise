@@ -19,6 +19,7 @@ interface WorkspaceContextType {
   error: string | null;
   isNoSemester: boolean;
   refreshWorkspace: (force?: boolean) => Promise<void>;
+  refreshStats: () => Promise<void>;
   updateAttendanceOptimistic: (occurrenceId: number, newStatus: string) => void;
   setSemesterDirectly: (sem: Semester | null) => void;
 }
@@ -209,6 +210,26 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setStoredJSON(STORAGE_KEY_SEM, sem);
   };
 
+  const refreshStats = async () => {
+    if (!semester) return;
+    try {
+      const [subjsRes, summaryRes] = await Promise.allSettled([
+        attendanceService.getSubjectsAttendance(semester.id),
+        attendanceService.getSummary(semester.id)
+      ]);
+      if (subjsRes.status === "fulfilled") {
+        setSubjects(subjsRes.value);
+        setStoredJSON(STORAGE_KEY_SUBJS, subjsRes.value);
+      }
+      if (summaryRes.status === "fulfilled") {
+        setOverallStats(summaryRes.value);
+        setStoredJSON(STORAGE_KEY_OVERALL, summaryRes.value);
+      }
+    } catch (e) {
+      console.warn("[WorkspaceContext] refreshStats error:", e);
+    }
+  };
+
   return (
     <WorkspaceContext.Provider value={{
       semester,
@@ -221,6 +242,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       error,
       isNoSemester,
       refreshWorkspace,
+      refreshStats,
       updateAttendanceOptimistic,
       setSemesterDirectly
     }}>

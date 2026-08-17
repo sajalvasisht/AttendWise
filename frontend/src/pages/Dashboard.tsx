@@ -29,12 +29,14 @@ const Dashboard: React.FC = () => {
     error: wsError, 
     isNoSemester, 
     refreshWorkspace,
+    refreshStats,
     updateAttendanceOptimistic,
     setSemesterDirectly 
   } = useWorkspace();
 
   const [localError, setLocalError] = useState<string | null>(null);
   const error = localError || wsError;
+  const mutatingIdsRef = React.useRef<Set<number>>(new Set());
 
   // Subject Attendance Edit states
   const [plannerSuggestions, setPlannerSuggestions] = useState<any[]>([]);
@@ -120,13 +122,22 @@ const Dashboard: React.FC = () => {
   }, [semester]);
 
   const handleStatusChange = async (occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked" | "holiday" | "medical_leave" | "other") => {
-    if (!semester) return;
+    if (!semester || mutatingIdsRef.current.has(occurrenceId)) return;
+    
+    // Guard against repeated duplicate clicks
+    mutatingIdsRef.current.add(occurrenceId);
+    
+    // Optimistic UI update
     updateAttendanceOptimistic(occurrenceId, status);
+    
     try {
       await attendanceService.updateStatus(semester.id, occurrenceId, status);
-      await refreshWorkspace(true);
+      await refreshStats();
     } catch (err) {
       console.error("Failed to update status", err);
+      setLocalError("Failed to update attendance. Please try again.");
+    } finally {
+      mutatingIdsRef.current.delete(occurrenceId);
     }
   };
 

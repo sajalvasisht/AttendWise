@@ -61,24 +61,17 @@ def calculate_subject_statistics(
     min_percent = subject.min_attendance_percent
     M = min_percent / 100.0
 
-    # Calculate safe bunks (in attendance units) — legacy field
-    if conducted_units == 0:
-        safe_bunks = 0
-    else:
-        safe_bunks_units = attended_units - M * conducted_units
-        safe_bunks = math.floor(safe_bunks_units)
-        if safe_bunks < 0:
-            safe_bunks = 0
-
-    # Calculate safe_bunks_sessions: max whole classes that can be missed
-    # while staying >= M. When missing x classes, conducted grows by x*lost_weight,
-    # so: attended / (conducted + x*lost_weight) >= M
-    #  => x <= (attended - M*conducted) / (M * lost_weight)
+    # Calculate safe_bunks_sessions (complete classes that can be missed) and safe_bunks (unit buffer)
+    # When missing x complete classes, conducted grows by x * lost_weight:
+    # attended / (conducted + x * lost_weight) >= M
+    #  => x <= (attended - M * conducted) / (M * lost_weight)
     safe_bunks_sessions = 0
+    safe_bunks = 0
     if conducted_units > 0 and M > 0 and lost_weight > 0:
         surplus = attended_units - M * conducted_units
         if surplus > 0:
             safe_bunks_sessions = math.floor(surplus / (M * lost_weight))
+            safe_bunks = safe_bunks_sessions * lost_weight
 
     # Calculate required consecutive classes to attend to reach threshold (expressed in units)
     required_to_attend = 0

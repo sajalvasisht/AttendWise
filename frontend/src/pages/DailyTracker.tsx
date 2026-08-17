@@ -11,7 +11,8 @@ import { useWorkspace } from "../context/WorkspaceContext";
 
 const DailyTracker: React.FC = () => {
   const navigate = useNavigate();
-  const { semester, subjects: subjectStats, calendarEvents: allEvents, isNoSemester, refreshWorkspace } = useWorkspace();
+  const { semester, subjects: subjectStats, calendarEvents: allEvents, isNoSemester, refreshWorkspace, refreshStats } = useWorkspace();
+  const mutatingIdsRef = React.useRef<Set<number>>(new Set());
 
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toLocaleDateString("en-CA")
@@ -83,7 +84,8 @@ const DailyTracker: React.FC = () => {
 
   // Update Status handler — optimistic UI: update immediately, API in background
   const handleStatusChange = async (occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked" | "holiday" | "medical_leave" | "other") => {
-    if (!semester) return;
+    if (!semester || mutatingIdsRef.current.has(occurrenceId)) return;
+    mutatingIdsRef.current.add(occurrenceId);
     setError(null);
 
     // Optimistic update: immediately reflect status in both state arrays
@@ -103,13 +105,15 @@ const DailyTracker: React.FC = () => {
       setMonthOccurrences(prev => prev.map(confirmOcc));
       setOccurrences(prev => prev.map(confirmOcc));
 
-      await refreshWorkspace(true);
+      await refreshStats();
     } catch (err) {
       console.error("Failed to update status", err);
       setError("Failed to update attendance status. Try again.");
       // Revert optimistic update
       setMonthOccurrences(prevMonth);
       setOccurrences(prevMonth.filter(o => o.date === selectedDate));
+    } finally {
+      mutatingIdsRef.current.delete(occurrenceId);
     }
   };
 
