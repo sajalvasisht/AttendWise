@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { semesterService, getStoredActiveSemester, setStoredActiveSemester } from "../services/semester";
-import type { Semester } from "../services/semester";
 import { plannerService } from "../services/planner";
 import type { SimulationResponse } from "../services/planner";
-import { calendarService } from "../services/calendar";
-import type { CalendarEvent } from "../services/calendar";
-import { subjectService } from "../services/subject";
 import {
   Plus, Trash2, Loader2, AlertCircle, CheckCircle2, AlertTriangle, ArrowRight, Compass
 } from "lucide-react";
 
 import Navbar from "../components/Navbar";
 import { motion } from "framer-motion";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 
 function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
@@ -33,62 +29,28 @@ function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
 
 const LeavePlanner: React.FC = () => {
   const navigate = useNavigate();
+  const { semester, subjects, calendarEvents: allEvents, isNoSemester, refreshWorkspace } = useWorkspace();
 
-  const [semester, setSemester] = useState<Semester | null>(() => getStoredActiveSemester());
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [datesList, setDatesList] = useState<string[]>([]);
   const [simulation, setSimulation] = useState<SimulationResponse | null>(null);
-  const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [hasSubjects, setHasSubjects] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const hasSubjects = subjects.length > 0;
 
   const [dateFocused, setDateFocused] = useState(false);
   const [dateHovered, setDateHovered] = useState(false);
 
-  const fetchSemester = async () => {
-    try {
-      const sems = await semesterService.list();
-      if (Array.isArray(sems) && sems.length === 0) {
-        setStoredActiveSemester(null);
-        setSemester(null);
-        navigate("/setup");
-        return;
-      }
-
-      const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1] || sems[0];
-      if (activeSem) {
-        setStoredActiveSemester(activeSem);
-        setSemester(activeSem);
-      }
-
-      if (activeSem) {
-        // Fetch subjects and calendar exceptions in parallel
-        const [subjsRes, eventsRes] = await Promise.allSettled([
-          subjectService.list(activeSem.id),
-          calendarService.list(activeSem.id),
-        ]);
-
-        if (subjsRes.status === "fulfilled") {
-          setHasSubjects(subjsRes.value.length > 0);
-        }
-
-        if (eventsRes.status === "fulfilled") {
-          setAllEvents(eventsRes.value);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load semester data", err);
-      setError("Could not load your workspace data. The server may be starting up.");
-    } finally {
-      setInitialLoading(false);
+  useEffect(() => {
+    if (isNoSemester) {
+      navigate("/setup");
     }
-  };
+  }, [isNoSemester, navigate]);
 
   useEffect(() => {
-    fetchSemester();
-  }, [navigate]);
+    refreshWorkspace();
+  }, []);
 
 
   // Add date to list
@@ -186,7 +148,7 @@ const LeavePlanner: React.FC = () => {
 
   const status = getOverallStatus();
 
-  if (!hasSubjects && !initialLoading) {
+  if (!hasSubjects && !loading) {
     return (
       <div className="min-h-screen bg-zinc-50/20 text-zinc-900 flex flex-col font-sans">
         <Navbar />
@@ -234,7 +196,7 @@ const LeavePlanner: React.FC = () => {
           </div>
         )}
 
-        {initialLoading ? (
+        {loading ? (
           <div className="flex flex-col justify-center items-center py-32 space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
             <p className="text-xs text-zinc-400 font-semibold">Loading planner...</p>

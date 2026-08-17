@@ -4,38 +4,40 @@ import {
   Loader2, AlertCircle, Clock, Brain, Trash2, 
   Upload, CalendarDays, RefreshCw, ChevronRight, Edit3
 } from "lucide-react";
-import { semesterService, getStoredActiveSemester, setStoredActiveSemester } from "../services/semester";
-import type { Semester } from "../services/semester";
+import { semesterService } from "../services/semester";
 import { attendanceService } from "../services/attendance";
-import type { OverallAttendanceStats, SubjectAttendanceStats, LectureOccurrence } from "../services/attendance";
-
+import type { SubjectAttendanceStats } from "../services/attendance";
 import { calendarService } from "../services/calendar";
-import type { CalendarEvent } from "../services/calendar";
 import { aiService } from "../services/ai";
 import { timetableService } from "../services/timetable";
 import { subjectService } from "../services/subject";
 import { plannerService } from "../services/planner";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../hooks/useAuth";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [semester, setSemester] = useState<Semester | null>(() => getStoredActiveSemester());
-  const [isNoSemester, setIsNoSemester] = useState(false);
-  const [subjects, setSubjects] = useState<SubjectAttendanceStats[]>([]);
-  const [todayLectures, setTodayLectures] = useState<LectureOccurrence[]>([]);
-  const [nextHoliday, setNextHoliday] = useState<CalendarEvent | null>(null);
-  const [todayExam, setTodayExam] = useState<CalendarEvent | null>(null);
-  const [todayHoliday, setTodayHoliday] = useState<CalendarEvent | null>(null);
-  const [upcomingAssessments, setUpcomingAssessments] = useState<CalendarEvent[]>([]);
-  const [plannerSuggestions, setPlannerSuggestions] = useState<any[]>([]);
-  const [overallStats, setOverallStats] = useState<OverallAttendanceStats | null>(null);
+  const { 
+    semester, 
+    subjects, 
+    overallStats, 
+    todayLectures, 
+    calendarEvents, 
+    loading, 
+    error: wsError, 
+    isNoSemester, 
+    refreshWorkspace,
+    updateAttendanceOptimistic,
+    setSemesterDirectly 
+  } = useWorkspace();
 
-  const [loading, setLoading] = useState<boolean>(() => !getStoredActiveSemester());
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const error = localError || wsError;
 
   // Subject Attendance Edit states
+  const [plannerSuggestions, setPlannerSuggestions] = useState<any[]>([]);
   const [editingSubj, setEditingSubj] = useState<SubjectAttendanceStats | null>(null);
   const [editAttended, setEditAttended] = useState<number>(0);
   const [editMissed, setEditMissed] = useState<number>(0);
@@ -74,7 +76,7 @@ const Dashboard: React.FC = () => {
         delivered: editAttended + editMissed
       });
       setEditingSubj(null);
-      await fetchDashboardData();
+      await refreshWorkspace(true);
     } catch (err) {
       console.error("Failed to sync attendance edit", err);
     } finally {
@@ -82,178 +84,64 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const fetchDashboardData = async () => {
-    if (!semester) {
-      setLoading(true);
-    }
-    setError(null);
-    setIsNoSemester(false);
-    try {
-      const sems = await semesterService.list();
-      // Contract Requirement: ONLY treat user as having no setup when HTTP 200 OK returns []
-      if (Array.isArray(sems) && sems.length === 0) {
-        setStoredActiveSemester(null);
-        setSemester(null);
-        setIsNoSemester(true);
-        setLoading(false);
-        navigate("/welcome");
-        return;
-      }
+  const todayStr = new Date().toLocaleDateString("en-CA");
 
-      const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1] || sems[0];
-      if (!activeSem) {
-        setStoredActiveSemester(null);
-        setSemester(null);
-        setIsNoSemester(true);
-        setLoading(false);
-        navigate("/welcome");
-        return;
-      }
+  const todayHoliday = calendarEvents.find(
+    (e) => e.date === todayStr && ["holiday", "college_closure", "exam_break"].includes(e.event_type)
+  ) || null;
 
-      setStoredActiveSemester(activeSem);
-      setSemester(activeSem);
+  const todayExam = calendarEvents.find(
+    (e) => e.date === todayStr && (e.event_type === "exam_day" || e.event_type === "exam")
+  ) || null;
 
-      // Fetch primary dashboard stats and schedules in parallel using Promise.allSettled for maximum resilience
-      const [subjsRes, todayRes, eventsRes, summaryRes] = await Promise.allSettled([
-        attendanceService.getSubjectsAttendance(activeSem.id),
-        attendanceService.getToday(activeSem.id),
-        calendarService.list(activeSem.id),
-        attendanceService.getSummary(activeSem.id)
-      ]);
+  const nextHoliday = calendarEvents.find(
+    (e) => e.date > todayStr && ["holiday", "college_closure", "exam_break"].includes(e.event_type)
+  ) || null;
 
-      if (summaryRes.status === "fulfilled") {
-        setOverallStats(summaryRes.value);
-      }
-
-      if (todayRes.status === "fulfilled") {
-        setTodayLectures(todayRes.value);
-      }
-
-      if (eventsRes.status === "fulfilled") {
-        const allEvents = eventsRes.value;
-        const todayStr = new Date().toLocaleDateString("en-CA");
-        const todayEvs = allEvents.filter(e => e.date === todayStr);
-        
-        const examEv = todayEvs.find(e => e.event_type === "exam_day" || e.event_type === "exam");
-        const holidayEv = todayEvs.find(e => ["holiday", "college_closure", "exam_break"].includes(e.event_type));
-        
-        setTodayExam(examEv || null);
-        setTodayHoliday(holidayEv || null);
-
-        // Next Holiday
-        const upcomingHolidays = allEvents
-          .filter(e => e.date >= todayStr && ["holiday", "college_closure", "exam_break"].includes(e.event_type))
-          .sort((a, b) => a.date.localeCompare(b.date));
-        
-        if (upcomingHolidays.length > 0) {
-          setNextHoliday(upcomingHolidays[0]);
-        }
-
-        // Assessments
-        const assessments = allEvents
-          .filter(e => e.date >= todayStr && ["exam_day", "exam", "assessment"].includes(e.event_type.toLowerCase()))
-          .sort((a, b) => a.date.localeCompare(b.date));
-        setUpcomingAssessments(assessments.slice(0, 3));
-      }
-
-      if (subjsRes.status === "fulfilled") {
-        const subjsData = subjsRes.value;
-        const sortedSubjects = [...subjsData].sort((a, b) => {
-          const getPriority = (s: SubjectAttendanceStats) => {
-            if (s.attendance_percent < s.min_attendance_percent) return 1;
-            if (s.safe_bunks === 0) return 2;
-            return 3;
-          };
-          return getPriority(a) - getPriority(b);
-        });
-        setSubjects(sortedSubjects);
-      }
-
-      // Unblock page render immediately
-      setLoading(false);
-
-      // Fetch non-critical planner suggestions asynchronously in the background so it never delays UI rendering
-      plannerService.getSuggestions(activeSem.id)
-        .then((suggestions) => {
-          setPlannerSuggestions(suggestions.slice(0, 2));
-        })
-        .catch((e) => {
-          console.warn("Non-blocking planner suggestions note:", e);
-        });
-
-    } catch (err: any) {
-      console.error("[Dashboard] Error fetching dashboard statistics:", err);
-      // Contract Requirement: An API failure MUST NEVER trigger onboarding redirect
-      setIsNoSemester(false);
-      setError("Couldn't load your workspace data. The server may be starting up.");
-      setLoading(false);
-    }
-  };
+  const upcomingAssessments = calendarEvents.filter(
+    (e) => e.date >= todayStr && (e.category === "ST" || e.category === "FA" || e.category === "CE" || e.event_type === "exam_day" || e.event_type === "exam")
+  );
 
   useEffect(() => {
-    fetchDashboardData();
+    if (isNoSemester) {
+      navigate("/welcome");
+    }
+  }, [isNoSemester, navigate]);
+
+  useEffect(() => {
+    refreshWorkspace();
   }, []);
+
+  useEffect(() => {
+    if (!semester) return;
+    plannerService.getSuggestions(semester.id)
+      .then((suggs) => setPlannerSuggestions(suggs.slice(0, 2)))
+      .catch(() => setPlannerSuggestions([]));
+  }, [semester]);
 
   const handleStatusChange = async (occurrenceId: number, status: "present" | "absent" | "cancelled" | "unmarked" | "holiday" | "medical_leave" | "other") => {
     if (!semester) return;
-    setError(null);
-
-    // Optimistic update: immediately reflect the new status in the UI
-    const previousLectures = todayLectures;
-    setTodayLectures(prev =>
-      prev.map(occ => occ.id === occurrenceId ? { ...occ, attendance_status: status } : occ)
-    );
-
+    updateAttendanceOptimistic(occurrenceId, status);
     try {
-      const updated = await attendanceService.updateStatus(semester.id, occurrenceId, status);
-      // Confirm with server response
-      setTodayLectures(prev =>
-        prev.map(occ => occ.id === occurrenceId ? { ...occ, attendance_status: updated.attendance_status } : occ)
-      );
-
-      // Refresh stats in the background (non-blocking)
-      Promise.allSettled([
-        attendanceService.getSubjectsAttendance(semester.id),
-        attendanceService.getSummary(semester.id)
-      ]).then(([subjsRes, summaryRes]) => {
-        if (subjsRes.status === "fulfilled") {
-          const sortedSubjects = [...subjsRes.value].sort((a, b) => {
-            const getPriority = (s: SubjectAttendanceStats) => {
-              if (s.attendance_percent < s.min_attendance_percent) return 1;
-              if (s.safe_bunks === 0) return 2;
-              return 3;
-            };
-            return getPriority(a) - getPriority(b);
-          });
-          setSubjects(sortedSubjects);
-        }
-        if (summaryRes.status === "fulfilled") {
-          setOverallStats(summaryRes.value);
-        }
-      });
-
+      await attendanceService.updateStatus(semester.id, occurrenceId, status);
+      await refreshWorkspace(true);
     } catch (err) {
       console.error("Failed to update status", err);
-      setError("Failed to record attendance. Please try again.");
-      // Revert optimistic update
-      setTodayLectures(previousLectures);
     }
   };
 
 
   const handleRestartSetup = async () => {
     if (!semester) return;
-    setLoading(true);
     try {
       await semesterService.delete(semester.id);
       localStorage.removeItem("setup_step");
       localStorage.removeItem("setup_method");
-      setSemester(null);
+      setSemesterDirectly(null);
       navigate("/setup");
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to restart setup.");
+      setLocalError(err.response?.data?.detail || "Failed to restart setup.");
     } finally {
-      setLoading(false);
       setActiveModal("none");
     }
   };
@@ -261,12 +149,12 @@ const Dashboard: React.FC = () => {
   const handleReplaceTimetableUpload = async () => {
     if (!uploadFile || !semester) return;
     setExtracting(true);
-    setError(null);
+    setLocalError(null);
     try {
       const response = await aiService.extractTimetable(uploadFile);
       setExtractedData(response);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Timetable extraction failed.");
+      setLocalError(err.response?.data?.detail || "Timetable extraction failed.");
     } finally {
       setExtracting(false);
     }
@@ -293,9 +181,9 @@ const Dashboard: React.FC = () => {
       setActiveModal("none");
       setUploadFile(null);
       setExtractedData(null);
-      fetchDashboardData();
+      await refreshWorkspace(true);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to replace timetable.");
+      setLocalError(err.response?.data?.detail || "Failed to replace timetable.");
     } finally {
       setSavingReplace(false);
     }
@@ -304,12 +192,12 @@ const Dashboard: React.FC = () => {
   const handleReplaceCalendarUpload = async () => {
     if (!uploadFile || !semester) return;
     setExtracting(true);
-    setError(null);
+    setLocalError(null);
     try {
       const response = await aiService.extractCalendar(uploadFile);
       setExtractedData(response);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Calendar extraction failed.");
+      setLocalError(err.response?.data?.detail || "Calendar extraction failed.");
     } finally {
       setExtracting(false);
     }
@@ -345,9 +233,9 @@ const Dashboard: React.FC = () => {
       setActiveModal("none");
       setUploadFile(null);
       setExtractedData(null);
-      fetchDashboardData();
+      await refreshWorkspace(true);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to replace calendar.");
+      setLocalError(err.response?.data?.detail || "Failed to replace calendar.");
     } finally {
       setSavingReplace(false);
     }
@@ -395,7 +283,7 @@ const Dashboard: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={fetchDashboardData}
+              onClick={() => refreshWorkspace(true)}
               className="rounded-xl bg-zinc-900 px-5 py-2.5 text-xs font-bold text-white hover:bg-zinc-800 transition-all flex items-center justify-center space-x-2 mx-auto cursor-pointer shadow-sm"
             >
               <RefreshCw className="h-3.5 w-3.5" />

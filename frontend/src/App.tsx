@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { WorkspaceProvider } from "./context/WorkspaceContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -26,117 +27,119 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-      <BrowserRouter>
-        <OnboardingTour />
-        <Routes>
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-          </Route>
-          <Route
-            path="/welcome"
-            element={
-              <ProtectedRoute>
-                <Welcome />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/setup-complete"
-            element={
-              <ProtectedRoute>
-                <SetupComplete />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manage-setup"
-            element={
-              <ProtectedRoute>
-                <ManageSetup />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/setup"
-            element={
-              <ProtectedRoute>
-                <SetupWizard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tracker"
-            element={
-              <ProtectedRoute>
-                <DailyTracker />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/summary"
-            element={
-              <ProtectedRoute>
-                <AttendanceSummary />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/planner"
-            element={
-              <ProtectedRoute>
-                <LeavePlanner />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/assistant"
-            element={
-              <ProtectedRoute>
-                <AIAssistant />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/ai"
-            element={
-              <ProtectedRoute>
-                <AIAssistant />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/initialize-attendance"
-            element={
-              <ProtectedRoute>
-                <InitializeAttendance />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          {/* Catch-all redirects to dashboard */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+        <WorkspaceProvider>
+          <BrowserRouter>
+            <OnboardingTour />
+            <Routes>
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+              </Route>
+              <Route
+                path="/welcome"
+                element={
+                  <ProtectedRoute>
+                    <Welcome />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/setup-complete"
+                element={
+                  <ProtectedRoute>
+                    <SetupComplete />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/manage-setup"
+                element={
+                  <ProtectedRoute>
+                    <ManageSetup />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/setup"
+                element={
+                  <ProtectedRoute>
+                    <SetupWizard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tracker"
+                element={
+                  <ProtectedRoute>
+                    <DailyTracker />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/summary"
+                element={
+                  <ProtectedRoute>
+                    <AttendanceSummary />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/planner"
+                element={
+                  <ProtectedRoute>
+                    <LeavePlanner />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/assistant"
+                element={
+                  <ProtectedRoute>
+                    <AIAssistant />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ai"
+                element={
+                  <ProtectedRoute>
+                    <AIAssistant />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/initialize-attendance"
+                element={
+                  <ProtectedRoute>
+                    <InitializeAttendance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Catch-all redirects to dashboard */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </WorkspaceProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 };

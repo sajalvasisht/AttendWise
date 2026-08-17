@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../hooks/useAuth";
+import { useWorkspace } from "../context/WorkspaceContext";
 import { semesterService } from "../services/semester";
 import type { Semester } from "../services/semester";
 import api from "../services/api";
@@ -44,9 +45,9 @@ function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
 const Settings: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { semester: activeSem, refreshWorkspace, setSemesterDirectly } = useWorkspace();
 
   const [semesters, setSemesters] = useState<Semester[]>([]);
-  const [activeSem, setActiveSem] = useState<Semester | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -87,7 +88,7 @@ const Settings: React.FC = () => {
       setSemesters(list);
       const active = list.find((s) => s.is_active) || list[list.length - 1];
       if (active) {
-        setActiveSem(active);
+        setSemesterDirectly(active);
       }
     } catch (err: any) {
       console.error("Error loading semesters in Settings:", err);
@@ -102,6 +103,7 @@ const Settings: React.FC = () => {
       await api.post(`/semesters/${semId}/activate`);
       setSuccessMsg("Active semester switched successfully.");
       await loadSemesters();
+      await refreshWorkspace(true);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to switch semester.");
     } finally {

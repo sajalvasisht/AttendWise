@@ -1,21 +1,18 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { semesterService, getStoredActiveSemester, setStoredActiveSemester } from "../services/semester";
-import type { Semester } from "../services/semester";
 import { attendanceService } from "../services/attendance";
 import type { LectureOccurrence, SubjectAttendanceStats } from "../services/attendance";
-import { calendarService } from "../services/calendar";
 import type { CalendarEvent } from "../services/calendar";
-import { timetableService } from "../services/timetable";
 import { 
   Clock, ChevronLeft, ChevronRight, AlertCircle, Brain, Calendar as CalendarIcon, X, Eye, CalendarDays
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 const DailyTracker: React.FC = () => {
   const navigate = useNavigate();
+  const { semester, subjects: subjectStats, calendarEvents: allEvents, isNoSemester, refreshWorkspace } = useWorkspace();
 
-  const [semester, setSemester] = useState<Semester | null>(() => getStoredActiveSemester());
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toLocaleDateString("en-CA")
   );
@@ -25,60 +22,23 @@ const DailyTracker: React.FC = () => {
   const [monthOccurrences, setMonthOccurrences] = useState<LectureOccurrence[]>([]);
   
   const [occurrences, setOccurrences] = useState<LectureOccurrence[]>([]);
-  const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
-  const [subjectStats, setSubjectStats] = useState<SubjectAttendanceStats[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasTimetable, setHasTimetable] = useState(true);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Side Drawer view state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Load active semester on mount
   useEffect(() => {
-    const fetchSemester = async () => {
-    try {
-      const sems = await semesterService.list();
-      if (Array.isArray(sems) && sems.length === 0) {
-        setStoredActiveSemester(null);
-        setSemester(null);
-        navigate("/setup");
-      } else if (Array.isArray(sems) && sems.length > 0) {
-        const activeSem = sems.find(s => s.is_active) || sems[sems.length - 1] || sems[0];
-        if (activeSem) {
-          setStoredActiveSemester(activeSem);
-          setSemester(activeSem);
-          const slots = await timetableService.list(activeSem.id);
-          setHasTimetable(slots.length > 0);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load semesters", err);
-      setError("Could not load your workspace data. The server may be starting up.");
-    } finally {
-      setInitialLoading(false);
+    if (isNoSemester) {
+      navigate("/setup");
     }
-  };
-    fetchSemester();
-  }, [navigate]);
+  }, [isNoSemester, navigate]);
 
-  // Load calendar events
   useEffect(() => {
-    if (!semester) return;
-    const fetchEvents = async () => {
-      try {
-        const evs = await calendarService.list(semester.id);
-        setAllEvents(evs);
-        
-        const stats = await attendanceService.getSubjectsAttendance(semester.id);
-        setSubjectStats(stats);
-      } catch (err) {
-        console.error("Failed to load calendar exceptions and stats", err);
-      }
-    };
-    fetchEvents();
-  }, [semester]);
+    refreshWorkspace();
+  }, []);
+
+
 
   // Load month occurrences (single request per month change)
   useEffect(() => {
@@ -143,10 +103,7 @@ const DailyTracker: React.FC = () => {
       setMonthOccurrences(prev => prev.map(confirmOcc));
       setOccurrences(prev => prev.map(confirmOcc));
 
-      // Refresh stats in the background (non-blocking)
-      attendanceService.getSubjectsAttendance(semester.id)
-        .then(stats => setSubjectStats(stats))
-        .catch(e => console.warn("Stats refresh failed", e));
+      await refreshWorkspace(true);
     } catch (err) {
       console.error("Failed to update status", err);
       setError("Failed to update attendance status. Try again.");
@@ -255,7 +212,7 @@ const DailyTracker: React.FC = () => {
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const todayStr = new Date().toLocaleDateString("en-CA");
 
-  if (!hasTimetable && !initialLoading) {
+  if (subjectStats.length === 0 && !loading) {
     return (
       <div className="min-h-screen bg-[#fcfdfd] text-[#0f172a] antialiased flex flex-col font-sans">
         <Navbar />
