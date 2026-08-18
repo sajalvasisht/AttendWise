@@ -213,7 +213,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     if (oldStatus === newStatus) return;
 
     // 2. Calculate unit delta for subject & overall stats
-    const subj = subjects.find(s => s.id === occ.subject_id);
+    const subj = subjects.find(s => s.subject_id === occ.subject_id);
     const units = subj?.units_per_class || 1;
 
     let oldAtt = 0, oldCond = 0;
@@ -232,7 +232,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     // 3. Optimistically update subjects list in 0ms
     setSubjects(prev => {
       const updated = prev.map(s => {
-        if (s.id !== occ.subject_id) return s;
+        if (s.subject_id !== occ.subject_id) return s;
         const updatedAttended = Math.max(0, s.attended + diffAtt);
         const updatedConducted = Math.max(0, s.conducted + diffCond);
         const updatedPct = updatedConducted > 0 ? (updatedAttended / updatedConducted) * 100 : 100;
@@ -240,7 +240,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
           ...s,
           attended: updatedAttended,
           conducted: updatedConducted,
-          current_percentage: Math.round(updatedPct * 10) / 10
+          attendance_percent: Math.round(updatedPct * 10) / 10
         };
       });
       setStoredJSON(STORAGE_KEY_SUBJS, updated);
@@ -257,7 +257,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         ...prev,
         attended: updatedAtt,
         conducted: updatedCond,
-        percentage: Math.round(updatedPct * 10) / 10
+        attendance_percent: Math.round(updatedPct * 10) / 10
       };
       setStoredJSON(STORAGE_KEY_OVERALL, updatedStats);
       return updatedStats;

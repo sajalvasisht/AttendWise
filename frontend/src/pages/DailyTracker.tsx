@@ -94,6 +94,7 @@ const DailyTracker: React.FC = () => {
       occ.id === occurrenceId ? { ...occ, attendance_status: status, is_imported: false } : occ;
     setMonthOccurrences(prev => prev.map(updateOcc));
     setOccurrences(prev => prev.map(updateOcc));
+    updateAttendanceOptimistic(occurrenceId, status);
 
     try {
       const updated = await attendanceService.updateStatus(semester.id, occurrenceId, status);
