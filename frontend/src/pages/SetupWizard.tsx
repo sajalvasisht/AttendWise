@@ -17,12 +17,69 @@ import { AttendWiseLogo } from "../components/AttendWiseLogo";
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const DEFAULT_BATCH_SUBJECTS = [
-  { name: "AOC-II", code: "CS-401", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "ADI", code: "CS-402", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "PA", code: "CS-403", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "SD", code: "CS-404", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "AIML", code: "CS-405", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "NALR-I", code: "CS-406", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "Algorithm Design & Implementation", code: "24CSE0317", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "Advanced Data Structures & Algorithms", code: "BE ADI T1", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "Programming Abstractions using Java", code: "24CSE0314", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "System Design SD", code: "24CSE0318", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "Artificial Intelligence and Machine Learning", code: "24CSE0316", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "Numerical Aptitude & Logical Reasoning – I", code: "25UNI0110", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "Basic Professional Communication", code: "24CSE0315", units_per_class: 2, min_attendance_percent: 75 },
+];
+
+const DEFAULT_G10_SLOTS_RAW = [
+  // Monday (0)
+  { subject_name: "Algorithm Design & Implementation", day_of_week: 0, start_time: "09:00:00", end_time: "11:00:00", room: "TG-409" },
+  { subject_name: "System Design SD", day_of_week: 0, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
+  { subject_name: "Advanced Data Structures & Algorithms", day_of_week: 0, start_time: "14:00:00", end_time: "16:00:00", room: "TG-502" },
+  // Tuesday (1)
+  { subject_name: "Advanced Data Structures & Algorithms", day_of_week: 1, start_time: "09:00:00", end_time: "11:00:00", room: "TG-502" },
+  { subject_name: "Programming Abstractions using Java", day_of_week: 1, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
+  { subject_name: "Algorithm Design & Implementation", day_of_week: 1, start_time: "14:00:00", end_time: "16:00:00", room: "TG-409" },
+  // Wednesday (2)
+  { subject_name: "Advanced Data Structures & Algorithms", day_of_week: 2, start_time: "09:00:00", end_time: "11:00:00", room: "TG-502" },
+  { subject_name: "Programming Abstractions using Java", day_of_week: 2, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
+  { subject_name: "Artificial Intelligence and Machine Learning", day_of_week: 2, start_time: "14:00:00", end_time: "16:00:00", room: "TG-502" },
+  // Thursday (3)
+  { subject_name: "Artificial Intelligence and Machine Learning", day_of_week: 3, start_time: "09:00:00", end_time: "11:00:00", room: "TG-502" },
+  { subject_name: "Numerical Aptitude & Logical Reasoning – I", day_of_week: 3, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
+  { subject_name: "Advanced Data Structures & Algorithms", day_of_week: 3, start_time: "14:00:00", end_time: "16:00:00", room: "TG-502" },
+  // Friday (4)
+  { subject_name: "Numerical Aptitude & Logical Reasoning – I", day_of_week: 4, start_time: "09:00:00", end_time: "11:00:00", room: "TG-502" },
+  { subject_name: "Programming Abstractions using Java", day_of_week: 4, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
+  { subject_name: "System Design SD", day_of_week: 4, start_time: "14:00:00", end_time: "16:00:00", room: "TG-502" },
+];
+
+const DEFAULT_BATCH_CALENDAR_EVENTS = [
+  // Exams & Assessments
+  { title: "Programming Abstractions using Java ST-1", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-08-01", event_type: "ST", description: "ST-1 Exam" },
+  { title: "Programming Abstractions using Java ST-2", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-09-03", event_type: "ST", description: "ST-2 Exam" },
+  { title: "AIML CE-1", category: "CE", schedule_effect: "KEEP_LECTURES", date: "2026-09-07", end_date: "2026-09-11", event_type: "CE", description: "Continuous Evaluation 1" },
+  { title: "NALR-I FA-1", category: "FA", schedule_effect: "KEEP_LECTURES", date: "2026-09-21", end_date: "2026-09-25", event_type: "FA", description: "Formative Assessment 1" },
+  { title: "NALR-I ST-1", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-10-10", event_type: "ST", description: "ST-1 Exam" },
+  { title: "System Design SD ST-1", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-10-16", event_type: "ST", description: "ST-1 Exam" },
+  { title: "AIML ST-1", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-10-24", event_type: "ST", description: "ST-1 Exam" },
+  { title: "Algorithm Design & Implementation ST-1", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-10-31", event_type: "ST", description: "ST-1 Exam" },
+  { title: "NALR-I FA-2", category: "FA", schedule_effect: "KEEP_LECTURES", date: "2026-11-12", end_date: "2026-11-18", event_type: "FA", description: "Formative Assessment 2" },
+  { title: "AIML CE-2", category: "CE", schedule_effect: "KEEP_LECTURES", date: "2026-11-16", end_date: "2026-11-20", event_type: "CE", description: "Continuous Evaluation 2" },
+  { title: "NALR-I ST-2", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-11-21", event_type: "ST", description: "ST-2 Exam" },
+  { title: "System Design SD ST-2", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-12-04", event_type: "ST", description: "ST-2 Exam" },
+  { title: "Algorithm Design & Implementation ST-2", category: "ST", schedule_effect: "REPLACE_LECTURES", date: "2026-12-05", event_type: "ST", description: "ST-2 Exam" },
+  { title: "System Design SD FA-1", category: "FA", schedule_effect: "KEEP_LECTURES", date: "2026-12-07", end_date: "2026-12-11", event_type: "FA", description: "Formative Assessment 1" },
+  { title: "Algorithm Design & Implementation FA-1..FA-5", category: "FA", schedule_effect: "KEEP_LECTURES", date: "2026-12-07", end_date: "2026-12-11", event_type: "FA", description: "FA Assessments" },
+
+  // Holidays
+  { title: "Independence Day", category: "Holiday", date: "2026-08-15", event_type: "holiday", description: "National Holiday" },
+  { title: "Krishna Janmashtami", category: "Holiday", date: "2026-09-04", event_type: "holiday", description: "Gazetted Holiday" },
+  { title: "Mahatma Gandhi's Birthday", category: "Holiday", date: "2026-10-02", event_type: "holiday", description: "National Holiday" },
+  { title: "Dussehra", category: "Holiday", date: "2026-10-19", end_date: "2026-10-20", event_type: "holiday", description: "Festival Holiday" },
+  { title: "Diwali Break", category: "Holiday", date: "2026-11-07", end_date: "2026-11-11", event_type: "holiday", description: "Festival Holiday" },
+  { title: "Sri Guru Nanak Dev Ji Birthday", category: "Holiday", date: "2026-11-24", event_type: "holiday", description: "Gazetted Holiday" },
+  { title: "Christmas Day", category: "Holiday", date: "2026-12-25", event_type: "holiday", description: "Gazetted Holiday" },
+
+  // Working Saturdays
+  { title: "Teaching Working Saturday (in lieu of Oct 03)", category: "Override", date: "2026-10-10", event_type: "working_day_override", description: "2nd Saturday Teaching Working Day" },
+  { title: "Teaching Working Saturday (in lieu of Nov 07)", category: "Override", date: "2026-11-14", event_type: "working_day_override", description: "2nd Saturday Teaching Working Day" },
+  { title: "Teaching Working Saturday (3rd Saturday)", category: "Override", date: "2026-09-19", event_type: "working_day_override", description: "3rd Saturday Teaching Working Day" },
 ];
 
 const SetupWizard: React.FC = () => {
@@ -104,16 +161,11 @@ const SetupWizard: React.FC = () => {
     try {
       let sem = semester;
       if (!sem) {
-        const today = new Date();
-        const startDate = semStart || today.toISOString().split("T")[0];
-        const endVal = new Date(today.getTime() + 120 * 86400000);
-        const endDate = semEnd || endVal.toISOString().split("T")[0];
         sem = await semesterService.create({
-          name: semName || "Spring 2026 (Batch Preset)",
-          start_date: startDate,
-          end_date: endDate,
+          name: "CSE 5th Semester (Batch 2024)",
+          start_date: "2026-08-01",
+          end_date: "2026-12-18",
           working_days: "0,1,2,3,4",
-          is_active: true,
         });
         setSemester(sem);
         setSemName(sem.name);
@@ -121,12 +173,15 @@ const SetupWizard: React.FC = () => {
         setSemEnd(sem.end_date);
       }
 
+      // 1. Create or retrieve Subjects
       const existing = await subjectService.list(sem.id);
       const createdList = [...existing];
 
       for (const sDef of DEFAULT_BATCH_SUBJECTS) {
         const alreadyExists = existing.some(
-          ex => ex.name.toLowerCase() === sDef.name.toLowerCase() || (ex.code && ex.code.toLowerCase() === sDef.code.toLowerCase())
+          ex => ex.name.toLowerCase().includes(sDef.name.toLowerCase()) || 
+                sDef.name.toLowerCase().includes(ex.name.toLowerCase()) ||
+                (ex.code && ex.code.toLowerCase() === sDef.code.toLowerCase())
         );
         if (!alreadyExists) {
           const newSubj = await subjectService.create(sem.id, {
@@ -140,11 +195,47 @@ const SetupWizard: React.FC = () => {
         }
       }
       setSubjects(createdList);
+
+      // 2. Map default G10 slots to subject IDs
+      const mappedSlots = DEFAULT_G10_SLOTS_RAW.map(rawSlot => {
+        const matched = createdList.find(s => 
+          s.name.toLowerCase().includes(rawSlot.subject_name.toLowerCase()) ||
+          rawSlot.subject_name.toLowerCase().includes(s.name.toLowerCase())
+        );
+        if (!matched) return null;
+        return {
+          subject_id: matched.id,
+          day_of_week: rawSlot.day_of_week,
+          start_time: rawSlot.start_time,
+          end_time: rawSlot.end_time,
+          room: rawSlot.room,
+        };
+      }).filter((s): s is any => s !== null);
+
+      setTimetableSlots(mappedSlots);
+
+      // 3. Map default Calendar events with subject IDs when matching
+      const mappedEvents = DEFAULT_BATCH_CALENDAR_EVENTS.map(ev => {
+        const matchedSubj = createdList.find(s => ev.title.toLowerCase().includes(s.name.toLowerCase()));
+        return {
+          title: ev.title,
+          category: ev.category,
+          schedule_effect: ev.schedule_effect,
+          date: ev.date,
+          end_date: ev.end_date,
+          event_type: ev.event_type,
+          description: ev.description,
+          subject_id: matchedSubj ? matchedSubj.id : undefined,
+        };
+      });
+
+      setCalendarEvents(mappedEvents);
+
       setSetupMethod("manual");
-      setStep(4);
+      setStep(4); // Advance directly to Timetable Grid Editor!
     } catch (err: any) {
       console.error("[Batch Preset Error]", err);
-      setError(err.response?.data?.detail || "Failed to load batch preset.");
+      setError(err.response?.data?.detail || "Failed to load 3rd Year CSE Batch preset.");
     } finally {
       setLoading(false);
     }
@@ -828,20 +919,21 @@ const SetupWizard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
+              {/* Option 1: 3rd Year CSE Batch Preset */}
               <button
                 onClick={handleApplyBatchPreset}
                 disabled={loading}
-                className="w-full text-left border-2 border-emerald-500/30 bg-emerald-500/5 p-5 rounded-xl hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all cursor-pointer flex items-center justify-between animate-fade-in group"
+                className="w-full text-left border-2 border-emerald-500/35 bg-emerald-500/5 p-5 rounded-xl hover:border-emerald-500/60 hover:bg-emerald-500/10 transition-all cursor-pointer flex items-center justify-between animate-fade-in group shadow-sm"
               >
                 <div className="space-y-1 pr-4">
                   <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                    ⚡ Default Batch Preset (Recommended)
+                    ⚡ 3rd Year CSE Batch Preset (Recommended)
                     <span className="text-[9px] bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      1-Click Setup
+                      Chitkara 5th Sem
                     </span>
                   </span>
                   <span className="text-[10.5px] text-zinc-600 block leading-relaxed">
-                    Pre-loads standard batch subjects (AOC-II, ADI, PA, SD, AIML, NALR-I) & planner. Just select your daily timetable slots!
+                    Instant 1-Click setup for 3rd Year CSE Batch. Pre-loaded with official subjects (AOC-II, ADI, PA, SD, AIML, NALR-I, BPC), G10 timetable, and academic planner!
                   </span>
                 </div>
                 {loading ? (
@@ -851,22 +943,7 @@ const SetupWizard: React.FC = () => {
                 )}
               </button>
 
-              <button
-                onClick={() => {
-                  setSetupMethod("manual");
-                  setStep(1);
-                }}
-                className="w-full text-left border border-border bg-background p-5 rounded-xl hover:border-foreground/20 hover:bg-muted/30 transition-all cursor-pointer flex items-center justify-between"
-              >
-                <div className="space-y-1 pr-4">
-                  <span className="text-xs font-semibold text-foreground block">Set Up Custom / Manually</span>
-                  <span className="text-[10px] text-muted-foreground block">
-                    Enter your semester details, custom subjects, and timetable slots step-by-step.
-                  </span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-
+              {/* Option 2: AI Timetable Import */}
               <button
                 onClick={() => {
                   setSetupMethod("ai");
@@ -875,13 +952,30 @@ const SetupWizard: React.FC = () => {
               >
                 <div className="space-y-1 pr-4">
                   <span className="text-xs font-semibold text-foreground block flex items-center gap-1.5">
-                    AI Timetable Import
+                    🤖 AI Timetable Import
                     <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 rounded font-semibold uppercase tracking-wider">
-                      Gemini
+                      Gemini AI
                     </span>
                   </span>
                   <span className="text-[10px] text-muted-foreground block">
-                    Upload your college timetable PDF or screenshot to extract details.
+                    Upload your college timetable PDF or image screenshot to extract schedule details.
+                  </span>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+
+              {/* Option 3: Custom / Manual Setup */}
+              <button
+                onClick={() => {
+                  setSetupMethod("manual");
+                  setStep(1);
+                }}
+                className="w-full text-left border border-border bg-background p-5 rounded-xl hover:border-foreground/20 hover:bg-muted/30 transition-all cursor-pointer flex items-center justify-between"
+              >
+                <div className="space-y-1 pr-4">
+                  <span className="text-xs font-semibold text-foreground block">✏️ Custom / Manual Setup</span>
+                  <span className="text-[10px] text-muted-foreground block">
+                    Define custom semester dates, custom subjects, and timetable slots step-by-step.
                   </span>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
