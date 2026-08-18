@@ -11,7 +11,7 @@ import { useWorkspace } from "../context/WorkspaceContext";
 
 const DailyTracker: React.FC = () => {
   const navigate = useNavigate();
-  const { semester, subjects: subjectStats, calendarEvents: allEvents, isNoSemester, refreshWorkspace, refreshStats } = useWorkspace();
+  const { semester, subjects: subjectStats, calendarEvents: allEvents, isNoSemester, refreshWorkspace, refreshStats, updateAttendanceOptimistic } = useWorkspace();
   const mutatingIdsRef = React.useRef<Set<number>>(new Set());
 
   const [selectedDate, setSelectedDate] = useState<string>(

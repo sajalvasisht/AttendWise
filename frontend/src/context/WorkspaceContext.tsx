@@ -200,9 +200,68 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   }, [isAuthenticated, token]);
 
   const updateAttendanceOptimistic = (occurrenceId: number, newStatus: string) => {
-    setTodayLectures(prev => prev.map(occ => 
-      occ.id === occurrenceId ? { ...occ, attendance_status: newStatus as any } : occ
+    // 1. Find occurrence in todayLectures
+    const occ = todayLectures.find(o => o.id === occurrenceId);
+    
+    // Always update todayLectures state instantly
+    setTodayLectures(prev => prev.map(item => 
+      item.id === occurrenceId ? { ...item, attendance_status: newStatus as any } : item
     ));
+
+    if (!occ) return;
+    const oldStatus = occ.attendance_status;
+    if (oldStatus === newStatus) return;
+
+    // 2. Calculate unit delta for subject & overall stats
+    const subj = subjects.find(s => s.id === occ.subject_id);
+    const units = subj?.units_per_class || 1;
+
+    let oldAtt = 0, oldCond = 0;
+    if (oldStatus === "present") { oldAtt = units; oldCond = units; }
+    else if (oldStatus === "absent") { oldAtt = 0; oldCond = units; }
+
+    let newAtt = 0, newCond = 0;
+    if (newStatus === "present") { newAtt = units; newCond = units; }
+    else if (newStatus === "absent") { newAtt = 0; newCond = units; }
+
+    const diffAtt = newAtt - oldAtt;
+    const diffCond = newCond - oldCond;
+
+    if (diffAtt === 0 && diffCond === 0) return;
+
+    // 3. Optimistically update subjects list in 0ms
+    setSubjects(prev => {
+      const updated = prev.map(s => {
+        if (s.id !== occ.subject_id) return s;
+        const updatedAttended = Math.max(0, s.attended + diffAtt);
+        const updatedConducted = Math.max(0, s.conducted + diffCond);
+        const updatedPct = updatedConducted > 0 ? (updatedAttended / updatedConducted) * 100 : 100;
+        return {
+          ...s,
+          attended: updatedAttended,
+          conducted: updatedConducted,
+          current_percentage: Math.round(updatedPct * 10) / 10
+        };
+      });
+      setStoredJSON(STORAGE_KEY_SUBJS, updated);
+      return updated;
+    });
+
+    // 4. Optimistically update overallStats in 0ms
+    setOverallStats(prev => {
+      if (!prev) return null;
+      const updatedAtt = Math.max(0, prev.attended + diffAtt);
+      const updatedCond = Math.max(0, prev.conducted + diffCond);
+      const updatedPct = updatedCond > 0 ? (updatedAtt / updatedCond) * 100 : 100;
+      const updatedStats = {
+        ...prev,
+        attended: updatedAtt,
+        conducted: updatedCond,
+        percentage: Math.round(updatedPct * 10) / 10
+      };
+      setStoredJSON(STORAGE_KEY_OVERALL, updatedStats);
+      return updatedStats;
+    });
   };
 
   const setSemesterDirectly = (sem: Semester | null) => {
