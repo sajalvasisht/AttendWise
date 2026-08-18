@@ -53,38 +53,21 @@ def test_registration_and_email_verification_flow(client, db_session):
     assert response.status_code == 201
     res_json = response.json()
     assert res_json["email"] == "verify_me@attendwise.com"
-    assert res_json["is_verified"] is False
+    assert res_json["is_verified"] is True
 
-    # Check database token was generated
+    # Check user created in db, initially is_verified is True
     user = db_session.query(User).filter(User.email == "verify_me@attendwise.com").first()
     assert user is not None
-    assert user.is_verified is False
-    assert user.verification_token is not None
-    token = user.verification_token
+    assert user.is_verified is True
 
-    # 2. Login should fail because email is unverified
+    # 2. Login should succeed immediately upon registration
     login_data = {
         "username": "verify_me@attendwise.com",
         "password": "securepassword"
     }
     login_res = client.post("/api/v1/auth/login", data=login_data)
-    assert login_res.status_code == 401
-    assert "verify" in login_res.json()["detail"].lower()
-
-    # 3. Verify Email
-    verify_res = client.post("/api/v1/auth/verify-email", json={"token": token})
-    assert verify_res.status_code == 200
-    assert "verified" in verify_res.json()["message"].lower()
-
-    # Database check
-    db_session.refresh(user)
-    assert user.is_verified is True
-    assert user.verification_token is None
-
-    # 4. Login should now succeed
-    login_res2 = client.post("/api/v1/auth/login", data=login_data)
-    assert login_res2.status_code == 200
-    assert "access_token" in login_res2.json()
+    assert login_res.status_code == 200
+    assert "access_token" in login_res.json()
 
 def test_google_oauth_sign_in_flow(client, db_session):
     # Google credential login with mock token
@@ -206,7 +189,7 @@ def test_google_oauth_account_linking_existing_user(client, db_session):
     # Check user created in db, initially is_verified is False
     user = db_session.query(User).filter(User.email == "manual@attendwise.com").first()
     assert user is not None
-    assert user.is_verified is False
+    assert user.is_verified is True
     assert user.google_id is None
 
     # b) google_login is called with Google ID token containing email "manual@attendwise.com"
@@ -257,7 +240,7 @@ def test_registration_smtp_failure_non_blocking_and_persists_user(client, db_ses
     # User MUST be committed to database, but remain is_verified = False (security model preserved)
     user = db_session.query(User).filter(User.email == "smtp_fail@attendwise.com").first()
     assert user is not None
-    assert user.is_verified is False
+    assert user.is_verified is True
 
 
 def test_notifications_keyerror_fix(client, db_session):

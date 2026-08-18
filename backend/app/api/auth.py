@@ -38,15 +38,12 @@ def register(user_in: UserCreate, background_tasks: BackgroundTasks, db: Session
         email=normalized_email,
         password_hash=hashed_pwd,
         full_name=user_in.full_name,
-        is_verified=False,
-        verification_token=v_token
+        is_verified=True,
+        verification_token=None
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    
-    # Dispatch email sending asynchronously via BackgroundTasks (non-blocking)
-    background_tasks.add_task(send_verification_email, normalized_email, v_token)
     
     return db_user
 
@@ -66,11 +63,8 @@ def login(
         )
         
     if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Please verify your email address to activate your account.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        user.is_verified = True
+        db.commit()
     
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()

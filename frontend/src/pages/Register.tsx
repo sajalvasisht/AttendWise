@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Loader2, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { semesterService } from "../services/semester";
 
 // Stagger sequence matching Login.tsx
 function stagger(i: number) {
@@ -38,7 +40,8 @@ function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
 }
 
 const Register: React.FC = () => {
-  const { register } = useAuth();
+  const navigate = useNavigate();
+  const { register, login, loginWithGoogle } = useAuth();
 
   const [email, setEmail]                     = useState("");
   const [fullName, setFullName]               = useState("");
@@ -46,7 +49,6 @@ const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError]                     = useState<string | null>(null);
   const [loading, setLoading]                 = useState(false);
-  const [success, setSuccess]                 = useState(false);
 
   const [nameFocused, setNameFocused] = useState(false);
   const [nameHovered, setNameHovered] = useState(false);
@@ -59,6 +61,34 @@ const Register: React.FC = () => {
 
   const [confirmFocused, setConfirmFocused] = useState(false);
   const [confirmHovered, setConfirmHovered] = useState(false);
+
+  const redirectAfterLogin = async () => {
+    try {
+      const sems = await semesterService.list();
+      if (Array.isArray(sems) && sems.length === 0) {
+        navigate("/welcome");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.warn("[Register] Semester check API error:", err);
+      navigate("/dashboard");
+    }
+  };
+
+  const handleGoogleSuccess = async (credential: string) => {
+    setError(null);
+    setLoading(true);
+    try {
+      await loginWithGoogle(credential);
+      await redirectAfterLogin();
+    } catch (err: any) {
+      console.error("[Google Register Error]", err);
+      setError(err.message || "Google Sign-In failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +106,9 @@ const Register: React.FC = () => {
         full_name: fullName || undefined,
         password,
       });
-      setSuccess(true);
+      // Auto-login upon registration for instant 1-click access
+      await login(email, password);
+      await redirectAfterLogin();
     } catch (err: any) {
       console.error("[Register Error]", err);
       const detail = err.response?.data?.detail;
@@ -98,57 +130,55 @@ const Register: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {success ? (
-        <div className="space-y-4 py-4 text-center animate-scale-in">
-          <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
-            <span className="text-xl font-bold">✓</span>
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-[16px] font-black text-zinc-900 tracking-tight">
-              Registration Successful
-            </h3>
-            <p className="text-[12px] text-zinc-500 leading-relaxed max-w-xs mx-auto">
-              We've sent a verification link to your email. Check your inbox to activate your account.
-            </p>
-          </div>
-          <Link
-            to="/login"
-            className="flex w-full items-center justify-center rounded-[12px] bg-zinc-900 h-10 text-[12px] font-bold text-white shadow-[0_2px_8px_rgba(15,23,42,0.1)] hover:bg-zinc-800 transition-colors"
-          >
-            <span>Back to Login</span>
-            <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-          </Link>
-        </div>
-      ) : (
-        <>
-          {/* Heading */}
-          <motion.div {...stagger(0)} className="space-y-0.5">
-            <h2 className="text-[23px] font-black tracking-tight text-zinc-900 leading-tight">
-              Create account
-            </h2>
-            <p className="text-[12px] text-zinc-500 font-medium">
-              Get started with AttendWise today.
-            </p>
-          </motion.div>
+      {/* Heading */}
+      <motion.div {...stagger(0)} className="space-y-0.5">
+        <h2 className="text-[23px] font-black tracking-tight text-zinc-900 leading-tight">
+          Create account
+        </h2>
+        <p className="text-[12px] text-zinc-500 font-medium">
+          Get started with AttendWise today.
+        </p>
+      </motion.div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.2 }}
-                className="rounded-xl px-4 py-3 text-[11px] text-red-650 font-medium"
-                style={{
-                  background: "rgba(239,68,68,0.04)",
-                  border: "1px solid rgba(239,68,68,0.1)",
-                }}
-              >
-                {error}
-              </motion.div>
-            )}
+      {/* Error */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -4, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.2 }}
+          className="rounded-xl px-4 py-3 text-[11px] text-red-650 font-medium"
+          style={{
+            background: "rgba(239,68,68,0.04)",
+            border: "1px solid rgba(239,68,68,0.1)",
+          }}
+        >
+          {error}
+        </motion.div>
+      )}
 
-            {/* Full Name */}
+      {/* Google Sign-In */}
+      <motion.div {...stagger(1)} className="w-full">
+        <GoogleSignInButton
+          onSuccess={handleGoogleSuccess}
+          onError={(err) => setError(err.message || "Google Sign-In failed")}
+        />
+      </motion.div>
+
+      {/* Divider */}
+      <motion.div {...stagger(2)} className="relative flex items-center gap-3">
+        <div className="flex-grow h-px bg-zinc-200/50" />
+        <span
+          className="text-[9.5px] font-bold tracking-widest uppercase"
+          style={{ color: "rgba(15,23,42,0.3)" }}
+        >
+          Or sign up with email
+        </span>
+        <div className="flex-grow h-px bg-zinc-200/50" />
+      </motion.div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Full Name */}
             <motion.div {...stagger(1)} className="space-y-1">
               <label
                 htmlFor="fullName"
@@ -287,8 +317,6 @@ const Register: React.FC = () => {
               </motion.button>
             </motion.div>
           </form>
-        </>
-      )}
 
       {/* Switcher */}
       <motion.div {...stagger(6)} className="text-center pt-1.5">
