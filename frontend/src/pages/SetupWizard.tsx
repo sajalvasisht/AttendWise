@@ -16,6 +16,15 @@ import { AttendWiseLogo } from "../components/AttendWiseLogo";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+const DEFAULT_BATCH_SUBJECTS = [
+  { name: "AOC-II", code: "CS-401", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "ADI", code: "CS-402", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "PA", code: "CS-403", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "SD", code: "CS-404", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "AIML", code: "CS-405", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "NALR-I", code: "CS-406", units_per_class: 2, min_attendance_percent: 75 },
+];
+
 const SetupWizard: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -88,6 +97,58 @@ const SetupWizard: React.FC = () => {
   const [showCalendarMergeConfirm, setShowCalendarMergeConfirm] = useState(false);
 
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+
+  const handleApplyBatchPreset = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let sem = semester;
+      if (!sem) {
+        const today = new Date();
+        const startDate = semStart || today.toISOString().split("T")[0];
+        const endVal = new Date(today.getTime() + 120 * 86400000);
+        const endDate = semEnd || endVal.toISOString().split("T")[0];
+        sem = await semesterService.create({
+          name: semName || "Spring 2026 (Batch Preset)",
+          start_date: startDate,
+          end_date: endDate,
+          working_days: "0,1,2,3,4",
+          is_active: true,
+        });
+        setSemester(sem);
+        setSemName(sem.name);
+        setSemStart(sem.start_date);
+        setSemEnd(sem.end_date);
+      }
+
+      const existing = await subjectService.list(sem.id);
+      const createdList = [...existing];
+
+      for (const sDef of DEFAULT_BATCH_SUBJECTS) {
+        const alreadyExists = existing.some(
+          ex => ex.name.toLowerCase() === sDef.name.toLowerCase() || (ex.code && ex.code.toLowerCase() === sDef.code.toLowerCase())
+        );
+        if (!alreadyExists) {
+          const newSubj = await subjectService.create(sem.id, {
+            name: sDef.name,
+            code: sDef.code,
+            units_per_class: sDef.units_per_class,
+            min_attendance_percent: sDef.min_attendance_percent,
+            track_attendance: true,
+          });
+          createdList.push(newSubj);
+        }
+      }
+      setSubjects(createdList);
+      setSetupMethod("manual");
+      setStep(4);
+    } catch (err: any) {
+      console.error("[Batch Preset Error]", err);
+      setError(err.response?.data?.detail || "Failed to load batch preset.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const checkExistingSemester = async () => {
     const params = new URLSearchParams(window.location.search);
@@ -768,16 +829,39 @@ const SetupWizard: React.FC = () => {
 
             <div className="grid grid-cols-1 gap-4">
               <button
+                onClick={handleApplyBatchPreset}
+                disabled={loading}
+                className="w-full text-left border-2 border-emerald-500/30 bg-emerald-500/5 p-5 rounded-xl hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all cursor-pointer flex items-center justify-between animate-fade-in group"
+              >
+                <div className="space-y-1 pr-4">
+                  <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                    ⚡ Default Batch Preset (Recommended)
+                    <span className="text-[9px] bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                      1-Click Setup
+                    </span>
+                  </span>
+                  <span className="text-[10.5px] text-zinc-600 block leading-relaxed">
+                    Pre-loads standard batch subjects (AOC-II, ADI, PA, SD, AIML, NALR-I) & planner. Just select your daily timetable slots!
+                  </span>
+                </div>
+                {loading ? (
+                  <Loader2 className="h-4 w-4 text-emerald-600 animate-spin shrink-0" />
+                ) : (
+                  <ArrowRight className="h-4 w-4 text-emerald-600 group-hover:translate-x-1 transition-transform shrink-0" />
+                )}
+              </button>
+
+              <button
                 onClick={() => {
                   setSetupMethod("manual");
                   setStep(1);
                 }}
-                className="w-full text-left border border-border bg-background p-5 rounded-xl hover:border-foreground/20 hover:bg-muted/30 transition-all cursor-pointer flex items-center justify-between animate-fade-in"
+                className="w-full text-left border border-border bg-background p-5 rounded-xl hover:border-foreground/20 hover:bg-muted/30 transition-all cursor-pointer flex items-center justify-between"
               >
                 <div className="space-y-1 pr-4">
-                  <span className="text-xs font-semibold text-foreground block">Set Up Manually</span>
+                  <span className="text-xs font-semibold text-foreground block">Set Up Custom / Manually</span>
                   <span className="text-[10px] text-muted-foreground block">
-                    Enter your semester details, subjects, and timetable slots step-by-step.
+                    Enter your semester details, custom subjects, and timetable slots step-by-step.
                   </span>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -797,7 +881,7 @@ const SetupWizard: React.FC = () => {
                     </span>
                   </span>
                   <span className="text-[10px] text-muted-foreground block">
-                    Upload your college timetable PDF or screenshot to extract and pre-fill the setup.
+                    Upload your college timetable PDF or screenshot to extract details.
                   </span>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
