@@ -78,11 +78,19 @@ const Register: React.FC = () => {
       });
       setSuccess(true);
     } catch (err: any) {
-      console.error(err);
-      setError(
-        err.response?.data?.detail ||
-        "Failed to register. Please check your details."
-      );
+      console.error("[Register Error]", err);
+      const detail = err.response?.data?.detail;
+      let errorMsg = "Failed to register. Please check your details.";
+      if (typeof detail === "string") {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map((d: any) => d.msg || d.detail || JSON.stringify(d)).join("; ");
+      } else if (typeof detail === "object" && detail !== null) {
+        errorMsg = detail.msg || JSON.stringify(detail);
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
