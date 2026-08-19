@@ -28,25 +28,25 @@ const DEFAULT_BATCH_SUBJECTS = [
 
 const DEFAULT_G10_SLOTS_RAW = [
   // Monday (0)
-  { subject_name: "Algorithm Design & Implementation", day_of_week: 0, start_time: "09:00:00", end_time: "11:00:00", room: "TG-409" },
-  { subject_name: "System Design SD", day_of_week: 0, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
-  { subject_name: "Advanced Data Structures & Algorithms", day_of_week: 0, start_time: "14:00:00", end_time: "16:00:00", room: "TG-502" },
+  { subject_name: "Algorithm Design & Implementation", day_of_week: 0, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "System Design SD", day_of_week: 0, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "Algorithm Design & Implementation", day_of_week: 0, start_time: "14:00:00", end_time: "16:00:00", room: "" },
   // Tuesday (1)
-  { subject_name: "Advanced Data Structures & Algorithms", day_of_week: 1, start_time: "09:00:00", end_time: "11:00:00", room: "TG-502" },
-  { subject_name: "Programming Abstractions using Java", day_of_week: 1, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
-  { subject_name: "Algorithm Design & Implementation", day_of_week: 1, start_time: "14:00:00", end_time: "16:00:00", room: "TG-409" },
+  { subject_name: "Algorithm Design & Implementation", day_of_week: 1, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "Programming Abstractions using Java", day_of_week: 1, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "Algorithm Design & Implementation", day_of_week: 1, start_time: "14:00:00", end_time: "16:00:00", room: "" },
   // Wednesday (2)
-  { subject_name: "Advanced Data Structures & Algorithms", day_of_week: 2, start_time: "09:00:00", end_time: "11:00:00", room: "TG-502" },
-  { subject_name: "Programming Abstractions using Java", day_of_week: 2, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
-  { subject_name: "Artificial Intelligence and Machine Learning", day_of_week: 2, start_time: "14:00:00", end_time: "16:00:00", room: "TG-502" },
+  { subject_name: "Algorithm Design & Implementation", day_of_week: 2, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "Programming Abstractions using Java", day_of_week: 2, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "Artificial Intelligence and Machine Learning", day_of_week: 2, start_time: "14:00:00", end_time: "16:00:00", room: "" },
   // Thursday (3)
-  { subject_name: "Artificial Intelligence and Machine Learning", day_of_week: 3, start_time: "09:00:00", end_time: "11:00:00", room: "TG-502" },
-  { subject_name: "Numerical Aptitude & Logical Reasoning – I", day_of_week: 3, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
-  { subject_name: "Advanced Data Structures & Algorithms", day_of_week: 3, start_time: "14:00:00", end_time: "16:00:00", room: "TG-502" },
+  { subject_name: "Artificial Intelligence and Machine Learning", day_of_week: 3, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "Numerical Aptitude & Logical Reasoning – I", day_of_week: 3, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "Algorithm Design & Implementation", day_of_week: 3, start_time: "14:00:00", end_time: "16:00:00", room: "" },
   // Friday (4)
-  { subject_name: "Numerical Aptitude & Logical Reasoning – I", day_of_week: 4, start_time: "09:00:00", end_time: "11:00:00", room: "TG-502" },
-  { subject_name: "Programming Abstractions using Java", day_of_week: 4, start_time: "11:00:00", end_time: "13:00:00", room: "TG-502" },
-  { subject_name: "System Design SD", day_of_week: 4, start_time: "14:00:00", end_time: "16:00:00", room: "TG-502" },
+  { subject_name: "Numerical Aptitude & Logical Reasoning – I", day_of_week: 4, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "Programming Abstractions using Java", day_of_week: 4, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "System Design SD", day_of_week: 4, start_time: "14:00:00", end_time: "16:00:00", room: "" },
 ];
 
 const DEFAULT_BATCH_CALENDAR_EVENTS = [

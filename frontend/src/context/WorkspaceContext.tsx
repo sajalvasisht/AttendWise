@@ -22,6 +22,7 @@ interface WorkspaceContextType {
   refreshStats: () => Promise<void>;
   updateAttendanceOptimistic: (occurrenceId: number, newStatus: string) => void;
   setSemesterDirectly: (sem: Semester | null) => void;
+  resetWorkspaceOptimistic: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -218,11 +219,13 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     let oldAtt = 0, oldCond = 0;
     if (oldStatus === "present") { oldAtt = units; oldCond = units; }
-    else if (oldStatus === "absent") { oldAtt = 0; oldCond = units; }
+    else if (oldStatus === "absent" || oldStatus === "unmarked") { oldAtt = 0; oldCond = units; }
+    else { oldAtt = 0; oldCond = 0; }
 
     let newAtt = 0, newCond = 0;
     if (newStatus === "present") { newAtt = units; newCond = units; }
-    else if (newStatus === "absent") { newAtt = 0; newCond = units; }
+    else if (newStatus === "absent" || newStatus === "unmarked") { newAtt = 0; newCond = units; }
+    else { newAtt = 0; newCond = 0; }
 
     const diffAtt = newAtt - oldAtt;
     const diffCond = newCond - oldCond;
@@ -269,6 +272,23 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setStoredJSON(STORAGE_KEY_SEM, sem);
   };
 
+  const resetWorkspaceOptimistic = () => {
+    setSemester(null);
+    setSubjects([]);
+    setOverallStats(null);
+    setTodayLectures([]);
+    setCalendarEvents([]);
+    setLoading(false);
+    setRefreshing(false);
+    setError(null);
+    setIsNoSemester(true);
+    sessionStorage.removeItem(STORAGE_KEY_SEM);
+    sessionStorage.removeItem(STORAGE_KEY_SUBJS);
+    sessionStorage.removeItem(STORAGE_KEY_OVERALL);
+    sessionStorage.removeItem(STORAGE_KEY_TODAY);
+    sessionStorage.removeItem(STORAGE_KEY_EVENTS);
+  };
+
   const refreshStats = async () => {
     if (!semester) return;
     try {
@@ -303,7 +323,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       refreshWorkspace,
       refreshStats,
       updateAttendanceOptimistic,
-      setSemesterDirectly
+      setSemesterDirectly,
+      resetWorkspaceOptimistic
     }}>
       {children}
     </WorkspaceContext.Provider>

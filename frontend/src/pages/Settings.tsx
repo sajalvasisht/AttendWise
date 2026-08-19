@@ -45,7 +45,7 @@ function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
 const Settings: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { semester: activeSem, refreshWorkspace, setSemesterDirectly } = useWorkspace();
+  const { semester: activeSem, refreshWorkspace, setSemesterDirectly, resetWorkspaceOptimistic } = useWorkspace();
 
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,15 +114,20 @@ const Settings: React.FC = () => {
 
   const handleRestartSetup = async () => {
     if (!activeSem) return;
-    setLoading(true);
+    const targetSemId = activeSem.id;
+
+    // Optimistically reset workspace state and navigate in 0ms
+    localStorage.removeItem("setup_step");
+    localStorage.removeItem("setup_method");
+    resetWorkspaceOptimistic();
+    setShowRestartConfirm(false);
+    navigate("/setup?mode=restart");
+
+    // Perform backend deletion asynchronously
     try {
-      await semesterService.delete(activeSem.id);
-      setShowRestartConfirm(false);
-      navigate("/setup?mode=restart");
+      await semesterService.delete(targetSemId);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to restart setup.");
-    } finally {
-      setLoading(false);
+      console.warn("[Settings] Background semester delete error:", err);
     }
   };
 

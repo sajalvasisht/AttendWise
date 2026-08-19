@@ -31,7 +31,7 @@ const Dashboard: React.FC = () => {
     refreshWorkspace,
     refreshStats,
     updateAttendanceOptimistic,
-    setSemesterDirectly 
+    resetWorkspaceOptimistic
   } = useWorkspace();
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -144,16 +144,20 @@ const Dashboard: React.FC = () => {
 
   const handleRestartSetup = async () => {
     if (!semester) return;
+    const targetSemId = semester.id;
+
+    // Optimistically reset workspace state and navigate in 0ms
+    localStorage.removeItem("setup_step");
+    localStorage.removeItem("setup_method");
+    resetWorkspaceOptimistic();
+    setActiveModal("none");
+    navigate("/setup?mode=restart");
+
+    // Perform backend deletion asynchronously
     try {
-      await semesterService.delete(semester.id);
-      localStorage.removeItem("setup_step");
-      localStorage.removeItem("setup_method");
-      setSemesterDirectly(null);
-      navigate("/setup");
+      await semesterService.delete(targetSemId);
     } catch (err: any) {
-      setLocalError(err.response?.data?.detail || "Failed to restart setup.");
-    } finally {
-      setActiveModal("none");
+      console.warn("[Dashboard] Background semester delete error:", err);
     }
   };
 
