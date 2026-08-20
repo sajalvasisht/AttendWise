@@ -36,6 +36,9 @@ export interface SubjectAttendanceStats {
   cancelled: number;
   unmarked: number;
   conducted: number;
+  raw_attended?: number;
+  raw_absent?: number;
+  raw_conducted?: number;
   attendance_percent: number;
   min_attendance_percent: number;
   safe_bunks: number;

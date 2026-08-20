@@ -239,11 +239,51 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         const updatedAttended = Math.max(0, s.attended + diffAtt);
         const updatedConducted = Math.max(0, s.conducted + diffCond);
         const updatedPct = updatedConducted > 0 ? (updatedAttended / updatedConducted) * 100 : 100;
+        const roundedPct = Math.round(updatedPct * 100) / 100;
+
+        const minPct = s.min_attendance_percent || 75;
+        const M = minPct / 100;
+        const earnedWeight = s.units_earned_per_class || units;
+        const lostWeight = s.units_lost_per_class || units;
+
+        let safeBunksSessions = 0;
+        let safeBunks = 0;
+        if (updatedConducted > 0 && M > 0 && lostWeight > 0) {
+          const surplus = updatedAttended - M * updatedConducted;
+          if (surplus > 0) {
+            safeBunksSessions = Math.floor(surplus / (M * lostWeight));
+            safeBunks = safeBunksSessions * lostWeight;
+          }
+        }
+
+        let requiredToAttend = 0;
+        let requiredSessions = 0;
+        if (roundedPct < minPct && updatedConducted > 0) {
+          const denominator = earnedWeight * (1.0 - M);
+          if (denominator > 0) {
+            const numerator = M * updatedConducted - updatedAttended;
+            const requiredClasses = Math.ceil(numerator / denominator);
+            requiredToAttend = Math.max(0, requiredClasses * earnedWeight);
+            requiredSessions = Math.max(0, requiredClasses);
+          }
+        }
+
+        const rawAttDiff = (newStatus === "present" ? 1 : 0) - (oldStatus === "present" ? 1 : 0);
+        const rawAbsDiff = (newStatus === "absent" ? 1 : 0) - (oldStatus === "absent" ? 1 : 0);
+        const rawCondDiff = (newStatus !== "cancelled" && newStatus !== "holiday" ? 1 : 0) - (oldStatus !== "cancelled" && oldStatus !== "holiday" ? 1 : 0);
+
         return {
           ...s,
           attended: updatedAttended,
           conducted: updatedConducted,
-          attendance_percent: Math.round(updatedPct * 10) / 10
+          raw_attended: Math.max(0, (s.raw_attended || 0) + rawAttDiff),
+          raw_absent: Math.max(0, (s.raw_absent || 0) + rawAbsDiff),
+          raw_conducted: Math.max(0, (s.raw_conducted || 0) + rawCondDiff),
+          attendance_percent: roundedPct,
+          safe_bunks: safeBunks,
+          safe_bunks_sessions: safeBunksSessions,
+          required_to_attend: requiredToAttend,
+          required_sessions: requiredSessions
         };
       });
       setStoredJSON(STORAGE_KEY_SUBJS, updated);
@@ -260,7 +300,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         ...prev,
         attended: updatedAtt,
         conducted: updatedCond,
-        attendance_percent: Math.round(updatedPct * 10) / 10
+        attendance_percent: Math.round(updatedPct * 100) / 100
       };
       setStoredJSON(STORAGE_KEY_OVERALL, updatedStats);
       return updatedStats;

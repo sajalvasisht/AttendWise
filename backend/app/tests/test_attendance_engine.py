@@ -441,3 +441,114 @@ def test_targeted_safe_leave_cases(db_session):
     assert nalr_stats["safe_bunks"] == 6
 
 
+def test_comprehensive_edge_cases_and_multi_unit_accuracy(db_session):
+    """Audits edge cases: exactly 75%, below target, above target, zero attendance, zero conducted, and 2-unit raw counts."""
+    user = User(email="edge@attendwise.com", password_hash=get_password_hash("pass"), full_name="Edge Tester")
+    db_session.add(user)
+    db_session.commit()
+
+    semester = Semester(user_id=user.id, name="Edge Term", start_date=date(2026, 1, 1), end_date=date(2026, 12, 31), is_active=True)
+    db_session.add(semester)
+    db_session.commit()
+
+    # 1. Exactly 75% (2-unit subject: 15 present out of 20 conducted = 30/40 units = 75.0%)
+    exact_subj = Subject(semester_id=semester.id, name="Exact 75", code="EX75", units_per_class=2, units_earned_per_class=2, units_lost_per_class=2, min_attendance_percent=75.0)
+    db_session.add(exact_subj)
+    db_session.commit()
+    for i in range(20):
+        db_session.add(LectureOccurrence(
+            semester_id=semester.id, subject_id=exact_subj.id,
+            date=date.today() - timedelta(days=i+1), start_time=time(9,0), end_time=time(11,0),
+            attendance_status="present" if i < 15 else "absent"
+        ))
+    db_session.commit()
+    exact_stats = calculate_subject_statistics(db_session, semester.id, exact_subj)
+    assert exact_stats["raw_conducted"] == 20
+    assert exact_stats["raw_attended"] == 15
+    assert exact_stats["raw_absent"] == 5
+    assert exact_stats["conducted"] == 40
+    assert exact_stats["attended"] == 30
+    assert exact_stats["attendance_percent"] == 75.0
+    assert exact_stats["safe_bunks_sessions"] == 0
+    assert exact_stats["required_sessions"] == 0
+
+    # 2. Below Target (2-unit subject: 14 present out of 20 conducted = 28/40 units = 70.0%)
+    below_subj = Subject(semester_id=semester.id, name="Below Target", code="BELOW", units_per_class=2, units_earned_per_class=2, units_lost_per_class=2, min_attendance_percent=75.0)
+    db_session.add(below_subj)
+    db_session.commit()
+    for i in range(20):
+        db_session.add(LectureOccurrence(
+            semester_id=semester.id, subject_id=below_subj.id,
+            date=date.today() - timedelta(days=i+1), start_time=time(9,0), end_time=time(11,0),
+            attendance_status="present" if i < 14 else "absent"
+        ))
+    db_session.commit()
+    below_stats = calculate_subject_statistics(db_session, semester.id, below_subj)
+    assert below_stats["raw_conducted"] == 20
+    assert below_stats["raw_attended"] == 14
+    assert below_stats["raw_absent"] == 6
+    assert below_stats["conducted"] == 40
+    assert below_stats["attended"] == 28
+    assert below_stats["attendance_percent"] == 70.0
+    assert below_stats["required_sessions"] == 4
+    assert below_stats["required_to_attend"] == 8
+    assert below_stats["safe_bunks_sessions"] == 0
+
+    # 3. Above Target (2-unit subject: 16 present out of 20 conducted = 32/40 units = 80.0%)
+    above_subj = Subject(semester_id=semester.id, name="Above Target", code="ABOVE", units_per_class=2, units_earned_per_class=2, units_lost_per_class=2, min_attendance_percent=75.0)
+    db_session.add(above_subj)
+    db_session.commit()
+    for i in range(20):
+        db_session.add(LectureOccurrence(
+            semester_id=semester.id, subject_id=above_subj.id,
+            date=date.today() - timedelta(days=i+1), start_time=time(9,0), end_time=time(11,0),
+            attendance_status="present" if i < 16 else "absent"
+        ))
+    db_session.commit()
+    above_stats = calculate_subject_statistics(db_session, semester.id, above_subj)
+    assert above_stats["raw_conducted"] == 20
+    assert above_stats["raw_attended"] == 16
+    assert above_stats["raw_absent"] == 4
+    assert above_stats["conducted"] == 40
+    assert above_stats["attended"] == 32
+    assert above_stats["attendance_percent"] == 80.0
+    assert above_stats["safe_bunks_sessions"] == 1
+    assert above_stats["safe_bunks"] == 2
+    assert above_stats["required_sessions"] == 0
+
+    # 4. Zero Attendance (2-unit subject: 0 present out of 10 conducted = 0/20 units = 0.0%)
+    zero_subj = Subject(semester_id=semester.id, name="Zero Attended", code="ZERO", units_per_class=2, units_earned_per_class=2, units_lost_per_class=2, min_attendance_percent=75.0)
+    db_session.add(zero_subj)
+    db_session.commit()
+    for i in range(10):
+        db_session.add(LectureOccurrence(
+            semester_id=semester.id, subject_id=zero_subj.id,
+            date=date.today() - timedelta(days=i+1), start_time=time(9,0), end_time=time(11,0),
+            attendance_status="absent"
+        ))
+    db_session.commit()
+    zero_stats = calculate_subject_statistics(db_session, semester.id, zero_subj)
+    assert zero_stats["raw_conducted"] == 10
+    assert zero_stats["raw_attended"] == 0
+    assert zero_stats["raw_absent"] == 10
+    assert zero_stats["conducted"] == 20
+    assert zero_stats["attended"] == 0
+    assert zero_stats["attendance_percent"] == 0.0
+    assert zero_stats["required_sessions"] == 30
+    assert zero_stats["required_to_attend"] == 60
+    assert zero_stats["safe_bunks_sessions"] == 0
+
+    # 5. Zero Conducted (Uninitialized subject)
+    uninit_subj = Subject(semester_id=semester.id, name="Uninitialized", code="UNINIT", units_per_class=2, units_earned_per_class=2, units_lost_per_class=2, min_attendance_percent=75.0)
+    db_session.add(uninit_subj)
+    db_session.commit()
+    uninit_stats = calculate_subject_statistics(db_session, semester.id, uninit_subj)
+    assert uninit_stats["raw_conducted"] == 0
+    assert uninit_stats["conducted"] == 0
+    assert uninit_stats["attended"] == 0
+    assert uninit_stats["attendance_percent"] == 0.0
+    assert uninit_stats["is_initialized"] == False
+    assert uninit_stats["safe_bunks_sessions"] == 0
+    assert uninit_stats["required_sessions"] == 0
+
+

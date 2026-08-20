@@ -97,7 +97,7 @@ def calculate_subject_statistics(
         "conducted": conducted_units,
         "raw_attended": present,
         "raw_absent": absent,
-        "raw_conducted": present + absent,
+        "raw_conducted": len(conducted_occurrences),
         "attendance_percent": percent if is_initialized else 0.0,
         "min_attendance_percent": min_percent,
         "safe_bunks": safe_bunks if is_initialized else 0,
