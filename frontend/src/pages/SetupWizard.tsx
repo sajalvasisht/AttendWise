@@ -17,36 +17,36 @@ import { AttendWiseLogo } from "../components/AttendWiseLogo";
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const DEFAULT_BATCH_SUBJECTS = [
-  { name: "Algorithm Design & Implementation", code: "24CSE0317", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "Advanced Data Structures & Algorithms", code: "BE ADI T1", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "Programming Abstractions using Java", code: "24CSE0314", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "System Design SD", code: "24CSE0318", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "Artificial Intelligence and Machine Learning", code: "24CSE0316", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "Numerical Aptitude & Logical Reasoning – I", code: "25UNI0110", units_per_class: 2, min_attendance_percent: 75 },
-  { name: "Basic Professional Communication", code: "24CSE0315", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "AOC-II", code: "24CSE0317", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "SD", code: "24CSE0318", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "ADI", code: "BE ADI T1", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "PA using Java", code: "24CSE0314", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "AIML", code: "24CSE0316", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "NALR-I", code: "25UNI0110", units_per_class: 2, min_attendance_percent: 75 },
+  { name: "BPC", code: "24CSE0315", units_per_class: 2, min_attendance_percent: 75 },
 ];
 
 const DEFAULT_G10_SLOTS_RAW = [
   // Monday (0)
-  { subject_name: "Algorithm Design & Implementation", day_of_week: 0, start_time: "09:00:00", end_time: "11:00:00", room: "" },
-  { subject_name: "System Design SD", day_of_week: 0, start_time: "11:00:00", end_time: "13:00:00", room: "" },
-  { subject_name: "Algorithm Design & Implementation", day_of_week: 0, start_time: "14:00:00", end_time: "16:00:00", room: "" },
+  { subject_name: "AOC-II", day_of_week: 0, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "SD", day_of_week: 0, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "ADI", day_of_week: 0, start_time: "14:00:00", end_time: "16:00:00", room: "" },
   // Tuesday (1)
-  { subject_name: "Algorithm Design & Implementation", day_of_week: 1, start_time: "09:00:00", end_time: "11:00:00", room: "" },
-  { subject_name: "Programming Abstractions using Java", day_of_week: 1, start_time: "11:00:00", end_time: "13:00:00", room: "" },
-  { subject_name: "Algorithm Design & Implementation", day_of_week: 1, start_time: "14:00:00", end_time: "16:00:00", room: "" },
+  { subject_name: "ADI", day_of_week: 1, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "PA using Java", day_of_week: 1, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "AOC-II", day_of_week: 1, start_time: "14:00:00", end_time: "16:00:00", room: "" },
   // Wednesday (2)
-  { subject_name: "Algorithm Design & Implementation", day_of_week: 2, start_time: "09:00:00", end_time: "11:00:00", room: "" },
-  { subject_name: "Programming Abstractions using Java", day_of_week: 2, start_time: "11:00:00", end_time: "13:00:00", room: "" },
-  { subject_name: "Artificial Intelligence and Machine Learning", day_of_week: 2, start_time: "14:00:00", end_time: "16:00:00", room: "" },
+  { subject_name: "ADI", day_of_week: 2, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "PA using Java", day_of_week: 2, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "AIML", day_of_week: 2, start_time: "14:00:00", end_time: "16:00:00", room: "" },
   // Thursday (3)
-  { subject_name: "Artificial Intelligence and Machine Learning", day_of_week: 3, start_time: "09:00:00", end_time: "11:00:00", room: "" },
-  { subject_name: "Numerical Aptitude & Logical Reasoning – I", day_of_week: 3, start_time: "11:00:00", end_time: "13:00:00", room: "" },
-  { subject_name: "Algorithm Design & Implementation", day_of_week: 3, start_time: "14:00:00", end_time: "16:00:00", room: "" },
+  { subject_name: "AIML", day_of_week: 3, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "NALR-I", day_of_week: 3, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "ADI", day_of_week: 3, start_time: "14:00:00", end_time: "16:00:00", room: "" },
   // Friday (4)
-  { subject_name: "Numerical Aptitude & Logical Reasoning – I", day_of_week: 4, start_time: "09:00:00", end_time: "11:00:00", room: "" },
-  { subject_name: "Programming Abstractions using Java", day_of_week: 4, start_time: "11:00:00", end_time: "13:00:00", room: "" },
-  { subject_name: "System Design SD", day_of_week: 4, start_time: "14:00:00", end_time: "16:00:00", room: "" },
+  { subject_name: "NALR-I", day_of_week: 4, start_time: "09:00:00", end_time: "11:00:00", room: "" },
+  { subject_name: "PA using Java", day_of_week: 4, start_time: "11:00:00", end_time: "13:00:00", room: "" },
+  { subject_name: "SD", day_of_week: 4, start_time: "14:00:00", end_time: "16:00:00", room: "" },
 ];
 
 const DEFAULT_BATCH_CALENDAR_EVENTS = [

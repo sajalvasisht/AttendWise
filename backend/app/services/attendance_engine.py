@@ -237,21 +237,7 @@ def _build_status_pattern(attended: int, missed: int) -> list:
 
 
 def sync_subject_past_occurrences(db: Session, semester_id: int, subject_id: int, attended: int, missed: int) -> None:
-    """Reconcile past LectureOccurrence records to match the requested attended/missed totals.
-
-    Non-destructive: existing records are updated in-place rather than deleted
-    and recreated. Dummy records are only added when the target delivered count
-    exceeds the number of timetable-generated records available.
-
-    Smart distribution via _build_status_pattern():
-    - Absences are spread evenly (no clustering)
-    - Recent records are preferentially kept as present (recency bias)
-    - is_imported=True is set on every record whose status is determined by
-      this function, so the UI can show an "Imported History" badge
-    - is_imported=False is set on records left as "unmarked" (no import data)
-
-    When the student manually edits any record, the API clears is_imported=False.
-    """
+    """Reconcile past LectureOccurrence records to match the requested attended/missed totals."""
     from datetime import date, time, timedelta
 
     semester = db.query(Semester).filter(Semester.id == semester_id).first()
@@ -259,12 +245,27 @@ def sync_subject_past_occurrences(db: Session, semester_id: int, subject_id: int
     if not semester or not subject:
         return
 
-    to_conduct = attended + missed
+    units_per_class = subject.units_earned_per_class if (subject.units_earned_per_class and subject.units_earned_per_class > 0) else 1
+    
+    # Calculate occurrence counts from unit values
+    total_existing = db.query(LectureOccurrence).filter(
+        LectureOccurrence.subject_id == subject.id,
+        LectureOccurrence.date <= date.today()
+    ).count()
 
-    # Load all past occurrences for this subject, ordered oldest → newest
+    if (attended + missed) > total_existing and units_per_class > 1:
+        attended_classes = math.ceil(attended / units_per_class)
+        missed_classes = math.ceil(missed / units_per_class)
+    else:
+        attended_classes = attended
+        missed_classes = missed
+
+    to_conduct = attended_classes + missed_classes
+
+    # Load all occurrences up to today for this subject, ordered oldest → newest
     past_occs = db.query(LectureOccurrence).filter(
         LectureOccurrence.subject_id == subject.id,
-        LectureOccurrence.date < date.today()
+        LectureOccurrence.date <= date.today()
     ).order_by(LectureOccurrence.date.asc()).all()
 
     # Pad with dummy entries if the target delivered count exceeds available records
@@ -284,29 +285,27 @@ def sync_subject_past_occurrences(db: Session, semester_id: int, subject_id: int
                 is_imported=False
             )
             db.add(new_occ)
-        db.commit()
+        db.flush()
         # Re-query to include the newly added padding records
         past_occs = db.query(LectureOccurrence).filter(
             LectureOccurrence.subject_id == subject.id,
-            LectureOccurrence.date < date.today()
+            LectureOccurrence.date <= date.today()
         ).order_by(LectureOccurrence.date.asc()).all()
 
     # Build the natural distribution pattern for the first `to_conduct` slots
-    pattern = _build_status_pattern(attended, missed)
+    pattern = _build_status_pattern(attended_classes, missed_classes)
 
     # Apply statuses in-place with is_imported tagging
     for idx, occ in enumerate(past_occs):
         if idx < len(pattern):
             new_status = pattern[idx]
             occ.attendance_status = new_status
-            # Tag as imported only when an actual attendance decision was made
             occ.is_imported = new_status in ("present", "absent")
         else:
-            # Slots beyond the delivered count: leave as unmarked, not imported
             occ.attendance_status = "unmarked"
             occ.is_imported = False
 
-    # Zero out the transient staging columns — the calendar is now the only source of truth
+    # Zero out transient staging columns
     subject.initial_conducted = 0
     subject.initial_attended = 0
-    db.commit()
+    db.flush()

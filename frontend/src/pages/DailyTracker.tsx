@@ -41,21 +41,31 @@ const DailyTracker: React.FC = () => {
 
 
 
-  // Load month occurrences (single request per month change)
+  const monthCacheRef = React.useRef<Map<string, LectureOccurrence[]>>(new Map());
+
+  // Load month occurrences (single request per month change with instant 0ms cache)
   useEffect(() => {
     if (!semester) return;
-    const fetchMonthData = async () => {
+    const year = currentMonth.getFullYear();
+    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+    const monthKey = `${year}-${month}`;
+    const lastDay = new Date(year, currentMonth.getMonth() + 1, 0).getDate();
+    const startStr = `${year}-${month}-01`;
+    const endStr = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+
+    // Instant 0ms cache hit
+    if (monthCacheRef.current.has(monthKey)) {
+      setMonthOccurrences(monthCacheRef.current.get(monthKey)!);
+      setLoading(false);
+    } else {
       setLoading(true);
+    }
+
+    const fetchMonthData = async () => {
       setError(null);
-
-      const year = currentMonth.getFullYear();
-      const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
-      const lastDay = new Date(year, currentMonth.getMonth() + 1, 0).getDate();
-      const startStr = `${year}-${month}-01`;
-      const endStr = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
-
       try {
         const monthData = await attendanceService.getByRange(semester.id, startStr, endStr);
+        monthCacheRef.current.set(monthKey, monthData);
         setMonthOccurrences(monthData);
       } catch (err) {
         console.error("Failed to load month range data", err);

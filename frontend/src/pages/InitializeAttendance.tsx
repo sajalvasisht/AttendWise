@@ -8,6 +8,7 @@ import { attendanceService } from "../services/attendance";
 import { Loader2, BookOpen, Info, ShieldAlert, CheckCircle2 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { motion } from "framer-motion";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
   return {
@@ -29,6 +30,7 @@ function inputStyle(focused: boolean, hovered: boolean): React.CSSProperties {
 }
 
 const InitializeAttendance: React.FC = () => {
+  const { refreshWorkspace } = useWorkspace();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [semesterId, setSemesterId] = useState<number | null>(null);
   
@@ -129,6 +131,7 @@ const InitializeAttendance: React.FC = () => {
         initial_attended: mode === "modeA" ? (attendedValues[s.id] === "" ? 0 : (attendedValues[s.id] as number) || 0) : 0,
       }));
       await attendanceService.initializeAttendance(semesterId, payload);
+      await refreshWorkspace(true);
       navigate("/dashboard");
     } catch (err: any) {
       console.error(err);
