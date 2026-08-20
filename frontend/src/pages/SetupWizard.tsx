@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { AttendWiseLogo } from "../components/AttendWiseLogo";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -85,6 +86,7 @@ const DEFAULT_BATCH_CALENDAR_EVENTS = [
 const SetupWizard: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { refreshWorkspace } = useWorkspace();
 
   // Wizard state
   const [step, setStep] = useState<number>(() => {
@@ -758,32 +760,47 @@ const SetupWizard: React.FC = () => {
     setLoading(true);
 
     try {
-      const mappedSlots = timetableSlots.map(slot => ({
-        subject_id: slot.subject_id,
-        day_of_week: slot.day_of_week,
+      const validSlots = timetableSlots.filter(s => s && s.subject_id && s.day_of_week !== undefined);
+      const mappedSlots = validSlots.map(slot => ({
+        subject_id: Number(slot.subject_id),
+        day_of_week: Number(slot.day_of_week),
         start_time: slot.start_time,
         end_time: slot.end_time,
-        room: slot.room
+        room: slot.room || ""
       }));
 
-      const eventsPayload = calendarEvents.map(event => ({
-        date: event.date,
-        event_type: event.event_type,
-        description: event.description,
-        timetable_day_override: event.timetable_day_override,
-        subject_id: event.subject_id,
-        start_time: event.start_time,
-        end_time: event.end_time
+      const validEvents = calendarEvents.filter(e => e && e.date && String(e.date).trim() !== "");
+      const eventsPayload = validEvents.map(event => ({
+        date: String(event.date).trim(),
+        end_date: event.end_date && String(event.end_date).trim() !== "" ? String(event.end_date).trim() : undefined,
+        event_type: event.event_type || "holiday",
+        description: event.description || "",
+        timetable_day_override: (event.timetable_day_override !== undefined && event.timetable_day_override !== null && event.timetable_day_override !== "") 
+          ? Number(event.timetable_day_override) 
+          : undefined,
+        subject_id: event.subject_id ? Number(event.subject_id) : undefined,
+        start_time: event.start_time || undefined,
+        end_time: event.end_time || undefined,
+        title: event.title || event.description || "Calendar Event",
+        category: event.category || "Holiday",
+        schedule_effect: event.schedule_effect || (
+          event.event_type === "working_day_override" || event.event_type === "working_saturday"
+            ? "OVERRIDE_TIMETABLE"
+            : (event.event_type === "ST" ? "REPLACE_LECTURES" : event.event_type === "FA" || event.event_type === "CE" ? "KEEP_LECTURES" : "REPLACE_LECTURES")
+        )
       }));
 
-      await Promise.all([
-        timetableService.save(semester.id, mappedSlots),
-        calendarService.save(semester.id, eventsPayload)
-      ]);
+      await timetableService.save(semester.id, mappedSlots);
+      if (eventsPayload.length > 0) {
+        await calendarService.save(semester.id, eventsPayload);
+      }
 
       localStorage.removeItem("setup_step");
+      localStorage.removeItem("setup_method");
+      await refreshWorkspace(true);
       navigate("/setup-complete");
     } catch (err: any) {
+      console.error("[SetupWizard Complete Error]", err);
       setError(err.response?.data?.detail || "Failed to complete setup. Please check your timetable/calendar inputs.");
     } finally {
       setLoading(false);
